@@ -1,0 +1,57 @@
+starlight/
+├── __init__.py
+├── fit.py              # 主入口：fit_spectrum
+├── io.py               # 数据读入
+   |- load_spectrum
+   |-
+   |-
+   |-
+├── models.py           # 模拟光谱生成器（base组合 + 红化 + 速度）
+├── extinction.py       # 红化函数
+├── core.py             # 拟合器（损失函数、优化器）
+├── utils.py            # 归一化、裁剪、重采样等
+├── test/               # 单元测试数据
+
+1. 读入数据模块（io.py）
+	•	支持不同格式的观测光谱（λ, Oλ, eλ, flagλ）
+	•	支持遮蔽文件（mask 文件）
+	•	支持 base master 文件和 base spectrum
+	•	提供数据预处理函数：波长范围裁剪、单位转换、平滑、归一化
+
+2. 拟合模型构建（models.py + extinction.py）
+	•	使用 numpy 加权线性组合 base 成分
+	•	对 base 成分应用红化（Extinction）
+	•	可选加入速度位移和高斯卷积（星系运动）
+
+3. 损失函数设计（core.py）
+	•	核心目标函数为残差平方和或？：
+	•	支持裁剪 deviant points（可参考 Clip & Refit）
+	•	可选：惩罚项、防止过拟合
+
+4. 优化过程（core.py）
+	•	建议使用 scipy.optimize.minimize() 或 differential_evolution
+	•	控制变量包括成分系数 x_j、消光 A_V、速度 v0 和分散 σ
+	•	可设置约束（如 x_j ∈ [0,1], ∑x_j = 1）
+
+5. 主API封装（fit.py）
+    def fit_spectrum(obs_spectrum, base, mask=None, config=None):
+    # 核心调用入口
+    return {
+        "model_spectrum": ...,
+        "population_vector": ...,
+        "A_V": ...,
+        "velocity_dispersion": ...,
+        "chi2": ...,
+    }
+
+# 总过程
+from starlight_pyfit import fit_spectrum
+
+result = fit_spectrum(obs_spectrum='xxx.txt', base='base.txt', mask='mask.txt', config='config.json')
+
+# 返回的 result 中会包含：
+# - model_spectrum（拟合出的谱）
+# - x_j（各成分比例）
+# - A_V（消光）
+# - v0, vd（速度偏移/展宽）
+# - chi2（拟合好坏）

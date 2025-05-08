@@ -1,0 +1,12 @@
+暂时不考虑 config file 和 grid file。
+    它们是控制 STARLIGHT 行为的“配置说明文件“
+    这类文件决定：
+	•   使用哪种红化定律？
+	•	有无 flagλ 和 eλ？
+	•	∆λ是多少？
+	•	拟合策略、拟合步骤等
+    它们是模型行为的说明书，而不是真正要加载的数据内容。
+
+    后面实现的 fit_spectrum()、build_model() 等可以接受一个 Python 字典 config 来代替 config/grid 文件的功能，这样更适合封装成 Python 库。
+
+    波长范围裁剪、平滑、归一化等，大部分已经写在 load_spectrum() 和 apply_mask() 中，剩下的可以后续在 utils.py 或 fit.py 中按需补充。
