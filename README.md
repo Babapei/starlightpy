@@ -91,6 +91,19 @@ tests/               pytest
 
 尚未实现（有意留空）：\(v_\star,\sigma_\star\) 卷积、AYV、clip-and-refit、EX0、与 Fortran 输出的回归测试、Rapid-χ²。
 
+## 如果你只听一句
+
+**默认：停掉这个仓库，科研用 pPXF。** 时间应花在光谱和论文上，而不是再造一个拟合器。
+
+只有在下面两条**同时**成立时，才值得把本仓库当软件项目做下去：
+
+1. 你所在的组（或你自己的论文）必须和旧 STARLIGHT 结果对齐，pPXF 换不过去；
+2. 你能弄到 `starlight.exe` + 同一套 base，用合成谱把 Python 输出对到 Fortran。
+
+那时候产品只有一个名字：**STARLIGHT 兼容拟合器**（`import` 进去就能跑，验收是 \(x_j\) / \(A_V\) / \(\chi^2\) 对得上）。不是通用全谱库，也不是各家码的整合层。
+
+做软件贡献、又想「有人用」：去给 pPXF、`specutils`、`dust_extinction` 提 PR，或写把 pPXF 接到 LAMOST/SDSS 的短流程文档。那比新建一个标准库更接近「大家都能用」。
+
 ## 建议你怎么选
 
 1. **只是想分析光谱**：用 pPXF，不要继续这个仓库。
