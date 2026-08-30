@@ -8,18 +8,18 @@
 
 ## 0. 一句话
 
-主项目是 **STARLIGHT 风格的 Python 复现**（`starlightpy`）：模板线性组合 + 尘埃 + 运动学，合成谱能收回参数。附带 **pPXF 封装**（`easyppxf`），方便调用已有拟合器。两个包并排，禁止合成一个 `backend=` 万能接口。
+主项目是用 **Python 重写 STARLIGHT 那套算法**（`starlightpy`）：模板线性组合 + 尘埃 + 运动学。附带 **pPXF 封装**（`easyppxf`）。两个包并排，禁止合成一个 `backend=`。
 
-不是 1:1 的 `starlight.exe`，不是各家拟合码整合库，不是论文，不是深度学习。
+这是**库开发**。没有投稿任务。下面「引用」只是用了别人算法时库文档里该写的出处，不是要你写论文。
 
 ---
 
 ## 1. 两个包，永远分开
 
-| 包 | 干什么 | 谁做拟合 | 论文该引 |
+| 包 | 干什么 | 谁做拟合 | 文档里写清出处 |
 | --- | --- | --- | --- |
-| `starlightpy` | 自研前向模型 + 优化（主业） | 我们 | 方法上可提 Cid Fernandes 2005 为「风格来源」，并写明不是官方码 |
-| `easyppxf` | 线性波长 → log 重采样 → 调 pPXF | pPXF | Cappellari，不要引本包装当方法 |
+| `starlightpy` | Python 重写 STARLIGHT 算法（主业） | 我们 | 算法来自 Cid Fernandes et al. 2005，不是官方 Fortran |
+| `easyppxf` | 线性波长 → 调 pPXF | pPXF | Cappellari；不要把本包装写成一种新拟合方法 |
 
 禁止：
 
@@ -59,13 +59,18 @@ M_\lambda = \left(\sum_j x_j\, b_{j,\lambda}\, r_\lambda(A_V)\right) \otimes G(v
 
 | 不做 | 原因 |
 | --- | --- |
-| 与 `starlight.exe` 输出 1:1 | 源码不公开，退火有大量工程参数，原版自己不同模式就不稳 |
-| 取代 pPXF 当「标准库」 | 新分析用 pPXF；本复现是开源风格实现 |
-| 各拟合码统一 API | 科学假设不同 |
-| 摊销推断 / CNN / 发文 | 不是本课题 |
-| Fortran 输入生成器当产品 | `starlight_toolkit` 已覆盖周边 |
+| 与 `starlight.exe` 输出 1:1 | 验收别设成对上二进制；算法仍按 STARLIGHT 那套写 |
+| 把 pPXF/FIREFLY 接进同一个 `fit()` | 那是别的算法，不是「完善 STARLIGHT」 |
+| Fortran 输入生成器当产品 | 周边已有 `starlight_toolkit` |
 
-1:1 若将来要对着二进制做对照实验，单开一章「对照」，不挡主线验收。
+### 别人写过的：该用就用，没有拟合器可接着改
+
+- **有、直接当依赖：** NumPy / SciPy（NNLS、插值、卷积）。消光若哪天换成 `dust_extinction` 也可以，公式是公开的。
+- **有、但是另一件事：** pPXF → 只放在 `easyppxf` 里调用，不要改成 `starlightpy` 的求解器（退火 / 非负 \(x_j\) 不是 pPXF 那套）。
+- **有、但是不拟合：** `starlight_toolkit`、`starlight_tools` 只读 Fortran 输出。可以参考文件格式，不要 fork 成主项目。
+- **没有：** 可维护的、把 STARLIGHT **拟合器**用 Python 写完的库。所以主业（`starlightpy`）没有「拿来继续完善」的上游，只能自己写求解器。
+
+1:1 若将来要对着二进制做对照，单开一章，不挡主线。
 
 ---
 
