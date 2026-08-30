@@ -3,13 +3,14 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "easyppxf"
+name = "starlightpy"
 version = "0.1.0"
-description = "Thin convenience wrapper around pPXF: linear wavelength in, kinematics out"
+description = "STARLIGHT-style spectral fitting plus a thin pPXF wrapper"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
   "numpy>=1.22",
+  "scipy>=1.8",
   "ppxf>=9.0",
 ]
 

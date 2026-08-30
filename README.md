@@ -1,22 +1,31 @@
-# easyppxf
+# starlightpy + easyppxf
 
-把一条**线性波长**的星系光谱交给 [pPXF](https://pypi.org/project/ppxf/)，省掉官方示例里那段 log 重采样、速度尺度、模板对齐。
+按 [docs/PLAN.md](docs/PLAN.md) 开发，不要改目标。
 
-这不是 STARLIGHT，也不自己拟合。拟合是 pPXF 做的，论文请引用 Cappellari，不要引这个包装。
+两个包并排，不要合成一个 `backend=`：
+
+| 包 | 用途 |
+| --- | --- |
+| `starlightpy` | **主业**：STARLIGHT 风格复现（模板 + 消光 + 运动学）。不是 `starlight.exe` 的 1:1。 |
+| `easyppxf` | **附带**：把线性波长交给 pPXF。拟合请引用 Cappellari。 |
 
 ```python
-from easyppxf import fit_spectrum, load_spectrum
+from starlightpy import FitConfig, fit_spectrum
 
-wave, flux, err = load_spectrum("galaxy.txt")
-result = fit_spectrum(wave, flux, templates, template_wave, error=err)
-print(result.velocity, result.sigma)  # km/s
+result = fit_spectrum(wave, flux, error, bases, config=FitConfig())
+print(result.a_v, result.x_fraction)
 ```
 
-模板要你自己提供（和官方示例一样）。本包装不附带 E-MILES 库。
+```python
+from easyppxf import fit_spectrum as fit_ppxf
+
+pp = fit_ppxf(wave, flux, templates, template_wave, error=err)
+print(pp.velocity, pp.sigma)
+```
+
+当前优化器是 \(A_V\) 网格 + NNLS（计划阶段 A）。运动学搜索、退火、clip 见 PLAN 阶段 B–D，对应函数会 `NotImplementedError`。
 
 ```bash
 pip install -e ".[dev]"
 pytest
 ```
-
-本仓库以前试过重写 STARLIGHT，那条路停了。现在只做这一件：老师说的「方便天文学家在 Python 里调用」，用已经存在的拟合器，而不是再造一个。
