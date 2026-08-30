@@ -1,37 +1,42 @@
 import numpy as np
 
-from starlightpy.extinction import get_extinction_curve
-from starlightpy.fit import fit_spectrum
-from starlightpy.model import build_model, normalize_at
+from easyppxf import fit_spectrum
 
 
-def _planck_like(wave, temperature):
-    wl_cm = np.asarray(wave) * 1e-8
-    c2 = 1.4388
-    return 1.0 / wl_cm**5 * np.exp(-c2 / (wl_cm * temperature))
+def _absorption_template(wave: np.ndarray, line_centers, width: float = 8.0) -> np.ndarray:
+    spec = np.ones_like(wave)
+    for center in line_centers:
+        spec -= 0.4 * np.exp(-0.5 * ((wave - center) / width) ** 2)
+    return np.clip(spec, 0.2, None)
 
 
-def test_noiseless_recovery_of_mixture_and_av():
-    wave = np.arange(3800.0, 7001.0, 2.0)
-    bases = np.column_stack(
+def test_ppxf_recovers_near_zero_velocity_on_matching_template():
+    wave_gal = np.arange(4800.0, 5400.0, 1.0)
+    wave_temp = np.arange(4300.0, 5900.0, 1.0)
+    templates = np.column_stack(
         [
-            _planck_like(wave, 4000),
-            _planck_like(wave, 6000),
-            _planck_like(wave, 9000),
+            _absorption_template(wave_temp, [4861.0, 5175.0]),
+            _absorption_template(wave_temp, [5000.0, 5270.0]),
+            _absorption_template(wave_temp, [4920.0, 5320.0]),
         ]
     )
-    true_x = np.array([0.55, 0.30, 0.15])
-    true_av = 0.40
-    q = get_extinction_curve(wave, law="CCM")
-    q0 = float(np.median(q[(wave >= 4010) & (wave <= 4060)]))
+    true = np.interp(wave_gal, wave_temp, templates[:, 0])
+    rng = np.random.default_rng(0)
+    flux = true + rng.normal(0.0, 0.005, size=true.size)
+    err = np.full_like(flux, 0.005)
 
-    bases_n = np.empty_like(bases)
-    for j in range(bases.shape[1]):
-        bases_n[:, j], _ = normalize_at(wave, bases[:, j])
-    obs, _ = normalize_at(wave, build_model(true_x, bases_n, q, true_av, q_lambda0=q0))
-    err = np.full_like(obs, 0.01)
-
-    result = fit_spectrum(wave, obs, err, bases, a_v_bounds=(0.0, 1.0), a_v_step=0.05)
-    assert abs(result.a_v - true_av) <= 0.05
-    np.testing.assert_allclose(result.x, true_x, atol=0.08)
-    assert result.chi2 < 1e-6
+    result = fit_spectrum(
+        wave_gal,
+        flux,
+        templates,
+        wave_temp,
+        error=err,
+        mask_emission=False,
+        start=(0.0, 80.0),
+        degree=0,
+        moments=2,
+    )
+    assert abs(result.velocity) < 80.0
+    assert 10.0 < result.sigma < 250.0
+    assert result.bestfit.shape == result.galaxy.shape
+    assert "Cappellari" in result.cite
