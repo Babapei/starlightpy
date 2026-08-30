@@ -97,6 +97,17 @@ tests/               pytest
 2. **要读已有 STARLIGHT `.out` 文件**：用 `starlight_toolkit`。
 3. **你仍想要一个可 `import` 的 STARLIGHT 风格拟合器，并且愿意用 Fortran 输出当金标准**：这个原型可以当起点。下一步应按这个顺序加，而不是再写 config 生成器：运动学卷积 → 与 `starlight.exe` 对同一合成谱 → 再考虑退火。
 
+## 这不是我们的方向：把市面上所有拟合码整合成一个「完整标准库」
+
+pPXF、FIREFLY、pyPipe3D、STARLIGHT、STECKMAP、Bagpipes、FSPS 看起来都在「拟合星系光」，但它们不是同一件事的不同实现，不能借来重写成一个大家都能用的标准库。
+
+- **科学假设不同。** pPXF 是正则化线性反演（运动学可以和种群一起拟合）；STARLIGHT 是退火搜非负 \(x_j\)；FIREFLY 是 \(\chi^2\) 加权的 SFH 集成；Bagpipes / Prospector 是测光/SED 贝叶斯。合成一个 `fit()` 会把不可比的后验假装成同一套数。
+- **「借用重写」会两边不讨好。** 重写 pPXF 等于重做 Cappellari 多年的工作，论文也不会引你的克隆；薄封装别人的包则变成永久适配层（API、许可证、引用、版本）。天文学里论文必须引用**方法原文**，一个超级包装器成不了新标准。
+- **标准层已经有了，而且不是拟合器。** 共享的该是光谱数据结构（Astropy `Spectrum1D` / `specutils`）、消光曲线、SSP 读入。拟合算法必须保持可替换的后端，而不是揉成一种。
+- **已经有人做过「统一界面」。** 例如 SPAN 是 GUI，里面 **调用 pPXF**，并不重写各家算法。那种产品是工作流外壳，不是新的科学库，也很快和各后端版本绑死。
+
+所以本仓库的范围保持狭窄：**STARLIGHT 风格的前向模型 + 将来可选的兼容拟合器**。可以 *依赖* `dust_extinction` 或 `specutils` 这类基础设施，但不会去吞并 pPXF / FIREFLY / Bagpipes。若你真正需要的是「同一条谱用多种码跑一遍做对比」，那是一篇方法论文 + 脚本，不是一个 PyPI 标准库。
+
 ## 安装与测试
 
 ```bash
