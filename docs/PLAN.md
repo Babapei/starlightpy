@@ -199,6 +199,21 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 
 ---
 
+## 9. 开始开发前（读完再写阶段 B）
+
+1. **一次只做一件。** 现在只做阶段 B（\(v,\sigma\) 搜索）。不要同时改 `easyppxf`、不要写退火、不要加 AYV / 发射线 / IFU。
+2. **两个 `fit_spectrum` 不要混。** `from starlightpy import fit_spectrum` 才是主业；pPXF 那条请 `import easyppxf` 并起别的名字。
+3. **先合成谱，不要一上来拟合真星系。** 真谱有红移、真空/空气波长、仪器展宽、发射线，阶段 B 会把锅甩给拟合器。SSP 模板版权（如 BC03）也不要往仓库里塞。
+4. **观测和模板必须已经在同一套波长上。** 现在 `build_model` / `fit_spectrum` 不负责插值。网格不同会直接报错或默默拟合错。
+5. **45 个 SSP 收不回「真实 \(x_j\)」。** 成分高度简并。验收用 2～4 个差得开的模板；\(x\) 看大类（年轻/年老）对不对，不要要求向量逐元相等。
+6. **阶段 B 网格会爆炸。** \(A_V \times v \times \sigma\) 每个点一次 NNLS。先粗网格、波长短一点的合成谱，跑通测试再加密。
+7. **卷积顺序。** 计划写的是先混合再 LOSVD；线性卷积下与「每列先卷积再 NNLS」等价。改运动学时别再搞一套对每个模板不同的 \(\sigma\)。
+8. **新开关先改 PLAN 再改进 `FitConfig`。** 禁止再出现 `fit_model_v2.py` 和本机 `sys.path`。
+9. **每次改拟合：合成 → `fit_spectrum` → `assert`。** 只出图不算过。
+10. **`easyppxf` 可以几个月不碰。** 它已经能跑；完善它排在阶段 F。
+
+---
+
 ## 9. 当前下一步（阶段 A 收尾 → B）
 
 1. 保持测试绿色。
