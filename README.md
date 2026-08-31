@@ -1,6 +1,6 @@
 # starlightpy + easyppxf
 
-按 [docs/PLAN.md](docs/PLAN.md) 开发，不要改目标。
+按 [docs/PLAN.md](docs/PLAN.md) 开发。以那份文档为准，不要靠聊天记录记目标。
 
 两个包并排，不要合成一个 `backend=`：
 
