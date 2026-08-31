@@ -23,7 +23,9 @@ pp = fit_ppxf(wave, flux, templates, template_wave, error=err)
 print(pp.velocity, pp.sigma)
 ```
 
-当前优化器是 \(A_V\) 网格 + NNLS（计划阶段 A）。运动学搜索、退火、clip 见 PLAN 阶段 B–D，对应函数会 `NotImplementedError`。
+当前做到 **阶段 A**（框架）。下一步只做阶段 B（运动学搜索），见 PLAN。
+
+算法出处：Cid Fernandes et al. 2005（STARLIGHT）。`easyppxf` 用 pPXF 时请引用 Cappellari。本库是 MIT 许可的软件，不是那两篇论文的官方实现。
 
 ```bash
 pip install -e ".[dev]"

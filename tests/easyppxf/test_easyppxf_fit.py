@@ -1,4 +1,7 @@
 import numpy as np
+import pytest
+
+ppxf = pytest.importorskip("ppxf")
 
 from easyppxf import fit_spectrum
 

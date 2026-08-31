@@ -63,6 +63,8 @@ def fit_spectrum(
     n_wave, n_comp = bases.shape
     if obs.shape != (n_wave,) or err.shape != (n_wave,):
         raise ValueError("Observation, error and base wavelength axes must match.")
+    if np.any(np.diff(wave) <= 0):
+        raise ValueError("wavelengths must be strictly increasing.")
 
     good = np.ones(n_wave, dtype=bool) if mask is None else np.asarray(mask, dtype=bool)
     obs_n, obs_scale = normalize_at(wave, obs, config.norm_window)

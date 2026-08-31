@@ -1,4 +1,4 @@
-"""STARLIGHT-style ASCII readers. Interpolation onto a common grid is the caller's job."""
+"""STARLIGHT-style ASCII readers. Use ``resample_to`` if grids differ; ``fit_spectrum`` does not interpolate."""
 
 from __future__ import annotations
 
@@ -137,3 +137,18 @@ def apply_mask(
     for lam_ini, lam_fin, _weight in mask_regions:
         good &= ~((wavelengths >= lam_ini) & (wavelengths <= lam_fin))
     return good
+
+
+def resample_to(wavelength, flux, wave_out):
+    """Linear interpolation onto ``wave_out``. Call this before ``fit_spectrum``."""
+    wave = np.asarray(wavelength, dtype=float)
+    y = np.asarray(flux, dtype=float)
+    target = np.asarray(wave_out, dtype=float)
+    if wave.size != y.size:
+        raise ValueError("wavelength and flux must have the same length.")
+    if wave.size < 2:
+        raise ValueError("Need at least two wavelength samples to resample.")
+    if np.any(np.diff(wave) <= 0) or np.any(np.diff(target) <= 0):
+        raise ValueError("Wavelength arrays must be strictly increasing.")
+    return np.interp(target, wave, y)
+

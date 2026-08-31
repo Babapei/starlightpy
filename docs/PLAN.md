@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-08-31
+最后更新：2026-08-31（开写前审查：规范 + 白名单 + resample）
 
 ---
 
@@ -81,7 +81,7 @@ M_\lambda = \left(\sum_j x_j\, b_{j,\lambda}\, r_\lambda(A_V)\right) \otimes G(v
 | 文件 | 职责 | 现在 | 以后才做 |
 | --- | --- | --- | --- |
 | `config.py` | `FitConfig`：归一窗口、\(A_V\) 网格、消光定律、运动学初值 | 有 | 退火温度表、clip 阈值 |
-| `io.py` | ASCII 谱 / mask / base master（STARLIGHT 文件格式可读） | 有骨架 | gzip SSP、FITS |
+| `io.py` | ASCII 谱 / mask / base master；`resample_to` | 有 | gzip SSP、FITS |
 | `extinction.py` | \(q_\lambda=A_\lambda/A_V\)：CCM（含 Fa/Fb）、CAL、Gordon | 有 CCM/CAL/GD | HyperZ 表 |
 | `model.py` | 红化后的线性组合 | 有 | AYV |
 | `kinematics.py` | 对数波长上的高斯 LOSVD（\(v_\star,\sigma_\star\)） | 有基础卷积 | 与仪器分辨率匹配 |
@@ -179,6 +179,7 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 - `r_v: float`
 - `a_v_bounds, a_v_step`
 - `v0_kms, sigma_kms`（阶段 A 可当固定值；阶段 B 起可搜索）
+- `search_kinematics: bool`（阶段 B 才允许 True）
 - `clip_nsigma: float | None`（阶段 D 才用）
 - `x_min_keep: float`（阶段 D）
 
@@ -219,3 +220,27 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 1. 保持测试绿色。
 2. 阶段 B：`fit_spectrum` 增加对 \(v_\star,\sigma_\star\) 的搜索（外层网格即可）。
 3. 不要先写退火。
+
+---
+
+## 11. 仓库规范（文档怎么管、代码怎么长）
+
+权威顺序：**PLAN > README > 代码注释 > 聊天。** 聊天里的话不改 PLAN 就不算数。
+
+不要再开「设计思想 / 架构愿景」第三份长文。阶段勾选、验收数字、禁止项都写在本文。
+
+**完成一个阶段：**
+
+1. 对应测试绿（合成谱走 `fit_spectrum` + `assert`）。
+2. 本文该阶段清单打勾，改「最后更新」。
+3. README 只改「当前做到哪」一句，不另写故事。
+4. 不新增 `*_v2.py`、不把 pPXF 接进 `starlightpy`。
+
+**代码：**
+
+- 主业只进 `src/starlightpy/`，附带只进 `src/easyppxf/`。
+- 测试文件名全局唯一（`test_starlight_*.py` / `test_easyppxf_*.py`），避免 pytest 撞模块名。
+- 观测与模板波长不同时，先 `resample_to`，不要在 `build_model` 里插值。
+- 主包装不强制依赖 pPXF；`pip install -e ".[dev]"` 才跑 `easyppxf` 测试。
+
+**出处（不是投稿）：** 文档注明算法来自 Cid Fernandes et al. 2005；`easyppxf` 注明 Cappellari。LICENSE 为 MIT。
