@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-08-31（开写前审查：规范 + 白名单 + resample）
+最后更新：2026-08-31（通读计划：改掉阶段 C 对 \(x_j\) 做退火；LOSVD 必须在均匀 lnλ 上）
 
 ---
 
@@ -84,10 +84,10 @@ M_\lambda = \left(\sum_j x_j\, b_{j,\lambda}\, r_\lambda(A_V)\right) \otimes G(v
 | `io.py` | ASCII 谱 / mask / base master；`resample_to` | 有 | gzip SSP、FITS |
 | `extinction.py` | \(q_\lambda=A_\lambda/A_V\)：CCM（含 Fa/Fb）、CAL、Gordon | 有 CCM/CAL/GD | HyperZ 表 |
 | `model.py` | 红化后的线性组合 | 有 | AYV |
-| `kinematics.py` | 对数波长上的高斯 LOSVD（\(v_\star,\sigma_\star\)） | 有基础卷积 | 与仪器分辨率匹配 |
-| `fit.py` | 优化 \(x_j, A_V\)（先网格+\(A_V\)+NNLS） | 有原型 | 见阶段 C |
+| `kinematics.py` | 均匀 lnλ 上的高斯 LOSVD（\(v_\star,\sigma_\star\)） | 有（已按速度空间修正） | 与仪器分辨率匹配 |
+| `fit.py` | 优化：\(x_j\) **永远 NNLS**；\(A_V\) 网格（阶段 A）；\(v,\sigma\) 外层搜索（阶段 B） | 有原型 | 阶段 C 只加密非线性参数 |
 | `clip.py` | 残差 clip 再拟合 | 空模块 + 文档 | 阶段 D |
-| `optimize.py` | 退火 + Metropolis | 占位，禁止提前堆 | 阶段 C |
+| `optimize.py` | 可选：对 \((A_V,v,\sigma)\) 退火 | 占位 | 阶段 C；**禁止对 \(x_j\) 做 Metropolis** |
 
 对外只保证：
 
@@ -101,12 +101,16 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 
 ## 4. 前向模型约定（写代码必须遵守）
 
-1. **波长单位**：埃（Å）。观测与模板必须先插到**同一套波长**再拟合；插值放在 `io` 或 `fit` 预处理，不要在 `build_model` 里偷偷插。
-2. **归一**：`norm_window` 默认 `(4010, 4060)`。每个模板一列单独除该窗口 median；观测同样。禁止用整块 `base_matrix` 的一个 median 去除。
-3. **红化**：\(r_\lambda = 10^{-0.4(q_\lambda-q_{\lambda0})A_V}\)，\(q_{\lambda0}\) 取归一窗口内 \(q\) 的 median。先红化各列再 \(\sum x_j\)。
-4. **运动学**：在**对数波长**（速度）上卷积高斯，中心 \(v_\star\) km/s，色散 \(\sigma_\star\) km/s。在合成 \(M_\lambda\)（红化之后）做一次，不要对每个模板用不同 \(\sigma\)（第一版）。
-5. **\(\chi^2\)**：\(\sum_\lambda w_\lambda^2 (O_\lambda-M_\lambda)^2\)，\(w=1/e_\lambda\)，mask 处 \(w=0\)。
-6. **\(x_j\)**：非负。第一版用 NNLS，不强制 \(\sum x_j=1\)（归一窗口已把尺度吃进 \(x\)）；报告前可再除以 \(\sum x\) 得到分数，原始权重也要保留。
+1. **静止系。** 第一版不拟合宇宙学红移。调用方先把谱移到静止系；\(v_\star\) 只是剩余视向速度。
+2. **波长单位**：埃（Å）。观测与模板必须先到**同一套波长**再拟合；用 `resample_to`，不要在 `build_model` 里插值。
+3. **归一**：`norm_window` 必须落在数据覆盖范围内（默认 `(4010, 4060)`）。每个模板一列单独除该窗口 median；观测同样。禁止用整块矩阵一个 median。
+4. **红化**：\(r_\lambda = 10^{-0.4(q_\lambda-q_{\lambda0})A_V}\)，\(q_{\lambda0}\) 为归一窗口内 \(q\) 的 median。先红化各列再混合。
+5. **运动学**：在**均匀 lnλ（速度）网格**上平移并高斯展宽，再插回原波长。禁止在线性 Å 像素上用固定 σ 做 `gaussian_filter1d`（那不是 km/s）。\(v_\star>0\) 表示退行，吸收往红端移，\(\lambda \to \lambda e^{v/c}\)。第一版所有成分共用同一 \((v,\sigma)\)。实现上应对**每列模板**做同一 LOSVD 再 NNLS（与「先混合再卷积」线性等价，且 \(x\) 仍是线性参数）。
+6. **\(\chi^2\)**：\(\sum_\lambda w_\lambda^2 (O_\lambda-M_\lambda)^2\)，\(w=1/e_\lambda\)，mask 处 \(w=0\)。发射线用 mask，不要靠 clip 当发射线处理（clip 是阶段 D 的野点）。
+7. **\(x_j\)**：非负，**始终用 NNLS（或等价非负最小二乘）求解**，不要改成单纯形上的随机游走。报告保留原始权重和归一化分数。
+8. **不要加 pPXF 那种加性 Legendre 多项式。** 那会改掉 STARLIGHT 的连续谱模型（尘埃 + 种群）。
+9. **合成运动学测试必须用带吸收线的模板**，不要用纯Planck/黑体连续谱（σ 无法约束）。
+10. **仪器分辨率：** 合成测试里模板与假观测一致即可。真数据要对齐 FWHM，那是后续，不要塞进阶段 B。
 
 ---
 
@@ -124,16 +128,17 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 
 ### 阶段 B — 运动学进入拟合
 
-- 固定 \(v_\star,\sigma_\star\) 可卷积（已有函数）之后：对 \(v,\sigma\) 粗网格或外层一维/二维搜索，内层仍 NNLS+\(A_V\)
-- 验收：合成谱 \(v=100\) km/s、\(\sigma=150\) km/s，收回误差先定宽（例如 \(|\Delta v|<50\), \(|\Delta\sigma|<80\)），再收紧
-- 未完成前不要退火
+- 先确认 `apply_losvd` 在均匀 lnλ 上（吸收线红移测试已有）。再对 \(v,\sigma\) 做**粗网格**，内层仍是 \(A_V\) 网格 + NNLS。
+- 合成谱必须带吸收线；\(v=100\) km/s、\(\sigma=150\) km/s 量级。第一轮验收放宽（如 \(|\Delta v|<50\)、\(|\Delta\sigma|<80\)），再收紧。
+- 未完成前不要退火，不要拟合真星系。
 
-### 阶段 C — 优化器换成风格更近的搜索（仍非 1:1）
+### 阶段 C — 只改进非线性参数的搜索（可选）
 
-- 在 `optimize.py` 写 Metropolis + 降温表
-- 参数：\(x\)（可在单纯形或非负空间扰动）、\(A_V\)、\(v\)、\(\sigma\)
-- 多起点（「链」）只做 3～5 条短链，不要复制 Fortran 配置文件里几十个开关
-- 验收：与阶段 B 同一合成谱，\(\chi^2\) 不差于网格法；高消光 \(A_V\sim1\) 不系统性崩
+Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，不是物理要求。\(x_j\) 在固定 \((A_V,v,\sigma)\) 下是线性非负最小二乘。**对 \(x_j\) 做退火会更慢、更不稳，阶段 B 的 χ² 还可能变差。**
+
+阶段 C 若做：只对 \((A_V, v_\star, \sigma_\star)\) 做更细的网格或短退火；\(x_j\) 仍 NNLS。3～5 个随机起点即可。不要把 Fortran 配置项搬进来。
+
+验收：同一合成谱，χ² **不差于** 阶段 B；\(A_V\sim 1\) 不系统性崩。若网格已经够，本阶段可以跳过并在本文注明。
 
 ### 阶段 D — clip 与稀疏 \(x\)
 
@@ -195,6 +200,8 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 - [ ] 归一是不是按列、按窗口？
 - [ ] 新功能有没有合成谱测试？
 - [ ] 有没有把 pPXF 接到 `starlightpy` 里当「加速后端」？
+- [ ] 有没有对 \(x_j\) 做 Metropolis/退火（应保持 NNLS）？
+- [ ] LOSVD 是否在线性 Å 像素上用固定 σ 平滑（错误）？
 
 任一为是：先停，改回本文。
 
@@ -208,18 +215,19 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 4. **观测和模板必须已经在同一套波长上。** 现在 `build_model` / `fit_spectrum` 不负责插值。网格不同会直接报错或默默拟合错。
 5. **45 个 SSP 收不回「真实 \(x_j\)」。** 成分高度简并。验收用 2～4 个差得开的模板；\(x\) 看大类（年轻/年老）对不对，不要要求向量逐元相等。
 6. **阶段 B 网格会爆炸。** \(A_V \times v \times \sigma\) 每个点一次 NNLS。先粗网格、波长短一点的合成谱，跑通测试再加密。
-7. **卷积顺序。** 计划写的是先混合再 LOSVD；线性卷积下与「每列先卷积再 NNLS」等价。改运动学时别再搞一套对每个模板不同的 \(\sigma\)。
+7. **卷积：** 同一 \((v,\sigma)\) 下，每列先 LOSVD 再 NNLS。不要给每个年龄不同的 σ。
 8. **新开关先改 PLAN 再改进 `FitConfig`。** 禁止再出现 `fit_model_v2.py` 和本机 `sys.path`。
 9. **每次改拟合：合成 → `fit_spectrum` → `assert`。** 只出图不算过。
 10. **`easyppxf` 可以几个月不碰。** 它已经能跑；完善它排在阶段 F。
+11. **不要为了「更像 Fortran」而对 \(x_j\) 做退火。**
 
 ---
 
 ## 10. 当前下一步
 
 1. 保持测试绿色。
-2. 阶段 B：`fit_spectrum` 增加对 \(v_\star,\sigma_\star\) 的搜索（外层网格即可）。
-3. 不要先写退火。
+2. 阶段 B：运动学搜索。合成谱用吸收线模板。先确认 LOSVD 红移测试仍绿。
+3. 不要先写退火，不要对 \(x_j\) 做 Metropolis。
 
 ---
 
@@ -244,3 +252,15 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 - 主包装不强制依赖 pPXF；`pip install -e ".[dev]"` 才跑 `easyppxf` 测试。
 
 **出处（不是投稿）：** 文档注明算法来自 Cid Fernandes et al. 2005；`easyppxf` 注明 Cappellari。LICENSE 为 MIT。
+
+**何时算第一版做完（免得永远加功能）：** 阶段 A + B + D，合成谱能收回 \(x\)（少模板）、\(A_V\)、\(v,\sigma\)，并支持 mask + clip。质量权重 \(μ_j\)、AYV、仪器 FWHM、真巡天 FITS 都不是 v0.1 门槛。阶段 C 可跳过。
+
+---
+
+## 12. 本次通读改了什么（原计划会适得其反的部分）
+
+旧阶段 C 要把 \(x_j\) 改成退火，那是在模仿 Fortran 的搜索器，不是重写物理模型。按那样做，会丢掉已经正确的线性求解，开工后拟合变差。已改为：\(x_j\) 保持 NNLS。
+
+旧 LOSVD 在线性波长像素上做固定宽度平滑，σ 的单位不是 km/s，阶段 B 的速度弥散会假。已改成均匀 lnλ 网格。
+
+旧验收若继续用 Planck 谱测 σ，测的是连续谱形状不是色散。阶段 B 必须用吸收线模板。

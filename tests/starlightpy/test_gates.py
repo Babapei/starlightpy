@@ -1,15 +1,9 @@
 import numpy as np
 import pytest
 
-from starlightpy import FitConfig, apply_losvd, fit_spectrum
+from starlightpy import FitConfig, fit_spectrum
 from starlightpy.clip import clip_and_refit
 from starlightpy.optimize import metropolis_anneal
-
-
-def test_losvd_identity_when_zero():
-    wave = np.linspace(4000, 5000, 50)
-    flux = np.linspace(1.0, 2.0, wave.size)
-    np.testing.assert_allclose(apply_losvd(wave, flux, 0.0, 0.0), flux)
 
 
 def test_phase_gates_are_closed():
