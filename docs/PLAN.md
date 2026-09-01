@@ -229,7 +229,7 @@ Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。现在做阶段 **B1**（合成器），不要跳到 B2。
+见 [docs/PROGRESS.md](PROGRESS.md)。B1 已完成；下一小段是 **B2**。
 
 ---
 
