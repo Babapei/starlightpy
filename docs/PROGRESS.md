@@ -6,10 +6,10 @@
 
 | 项 | 值 |
 | --- | --- |
-| 阶段 | D（clip 与稀疏 \(x\)） |
-| 小段 | **B3 已完成**（2026-09-01）；C 已跳过 |
-| 下一小段 | D：NSIGMA clip 再拟合 + `x_min_keep`（EX0） |
-| 不要做 | 退火、真星系、对 \(x_j\) 做 Metropolis；不要为跳过的 C 填 `optimize.py` |
+| 阶段 | E（输入） |
+| 小段 | **D 已完成**（2026-09-01）；v0.1 = A+B+D |
+| 下一小段 | E：`.cxt` / gzip / 目录循环 / 可选 SDSS FITS |
+| 不要做 | 退火、作业调度、把 pPXF 接进 `starlightpy` |
 
 ## 小段清单
 
@@ -27,7 +27,7 @@
 ### 阶段 C–F
 
 - [x] **C 跳过**：B3 网格已够，不对 \(x_j\) 退火。
-- [ ] D clip + EX0
+- [x] D clip + EX0
 - [ ] E `.cxt` / gzip / 批量 / 可选 SDSS FITS
 
 ## B2 验收（先写再做，2026-09-01）
@@ -73,6 +73,19 @@ B2 真值落在网格上，无法区分「χ² 最小」和「碰巧踩点」。
 | EX0 | 真值 \(x=(0.55,0.40,0.05)\)，`x_min_keep=0.10` | 第三分量 \(x=0\)；其余分数接近丢掉后的归一 |
 | 门禁 | `metropolis_anneal` 仍 `NotImplementedError` | clip 不再抛未实现 |
 
+**D 结果（2026-09-01）：通过。** 尖峰被 clip；EX0 丢掉第三分量。v0.1 门槛达到。
+
+## E 验收（先写再做，2026-09-01）
+
+不拟合真星系。用临时文件。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| `.cxt` | 首行 Npix，四列，`flag=2` 一像素 | `load_spectrum` 读出；`good_from_flags` 该像素 False |
+| gzip | `.cxt.gz` 与 `.spec.gz` 模板 | 与明文相同 |
+| 批量 | 目录两份 `.cxt` | `iter_ascii_spectra` 产出 2 条 |
+| FITS | 自造 SDSS 风格 table（需 astropy） | 波长/流量/误差/mask；两包各自 loader，互不 import |
+
 ## 日志
 
 | 日期 | 小段 | 做了什么 |
@@ -81,3 +94,4 @@ B2 真值落在网格上，无法区分「χ² 最小」和「碰巧踩点」。
 | 2026-09-01 | B1 | `simulate.py` + 固定真值 \(v,\sigma\) 收回 \(x,A_V\) |
 | 2026-09-01 | B2 | 外层 \(v,\sigma\) 网格；无噪声 + SNR=30 测试 |
 | 2026-09-01 | B3 | 离网 \(v,\sigma\) 收回；C 跳过 |
+| 2026-09-01 | D | NSIGMA clip + EX0；v0.1 |

@@ -86,8 +86,8 @@ M_\lambda = \left(\sum_j x_j\, b_{j,\lambda}\, r_\lambda(A_V)\right) \otimes G(v
 | `model.py` | 红化后的线性组合 | 有 | AYV |
 | `kinematics.py` | 均匀 lnλ 上的高斯 LOSVD（\(v_\star,\sigma_\star\)） | 有（已按速度空间修正） | 与仪器分辨率匹配 |
 | `fit.py` | 优化：\(x_j\) **永远 NNLS**；\(A_V\) 网格（阶段 A）；\(v,\sigma\) 外层搜索（阶段 B） | 有原型 | 阶段 C 只加密非线性参数 |
-| `clip.py` | 残差 clip 再拟合 | 空模块 + 文档 | 阶段 D |
-| `optimize.py` | 可选：对 \((A_V,v,\sigma)\) 退火 | 占位 | 阶段 C；**禁止对 \(x_j\) 做 Metropolis** |
+| `clip.py` | 残差 clip 再拟合 | 有 NSIGMA clip + EX0 分量裁剪 | — |
+| `optimize.py` | 可选：对 \((A_V,v,\sigma)\) 退火 | 占位（阶段 C 已跳过） | **禁止对 \(x_j\) 做 Metropolis** |
 
 对外只保证：
 
@@ -144,15 +144,15 @@ Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，
 
 ### 阶段 D — clip 与稀疏 \(x\)
 
-- `clip.py`：第一次拟合后 \(|O-M|>n\sigma\) 置权重 0，再拟合一次
-- 丢掉过小 \(x_j\) 再拟合（EX0 风格，阈值写进 `FitConfig`）
-- 仍用合成谱；不要为了像手册而加没测试的分支
+- [x] `clip.py`：第一次拟合后 \(|O-M|>n\sigma e_\lambda\) 置权重 0，冻结 \((v,\sigma)\) 再拟合一次
+- [x] 丢掉过小 \(x_j\) 再拟合（EX0，`x_min_keep`）
+- [x] 合成谱验收；退火门禁仍关闭
 
 ### 阶段 E — 输入体验（次要）
 
-- 读 STARLIGHT 的 `.cxt` / mask / base master（`io.py` 扩）
-- 可选：SDSS 一维 FITS 读入（给 `starlightpy` 和 `easyppxf` 各写自己的 loader，可复制不可硬耦合）
-- 批量：目录里多条谱的循环即可，不要作业调度系统
+- [ ] 读 STARLIGHT 的 `.cxt`（含可选 Npix 行、`flag≥2`）/ mask / base master；gzip SSP
+- [ ] 可选：SDSS 一维 FITS（`starlightpy` 与 `easyppxf` 各一份 loader，不硬耦合）
+- [ ] 批量：目录循环 `iter_ascii_spectra`
 
 ### 阶段 F — `easyppxf` 补强（永远低于 A–D）
 
@@ -229,7 +229,7 @@ Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。B 已完成、C 已跳过；当前是 **阶段 D**（clip + EX0）。
+见 [docs/PROGRESS.md](PROGRESS.md)。A+B+D 已完成（v0.1）；当前是 **阶段 E**（文件读入）。
 
 ---
 

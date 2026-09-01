@@ -15,7 +15,8 @@ dependencies = [
 
 [project.optional-dependencies]
 ppxf = ["ppxf>=9.0"]
-dev = ["pytest>=7", "ppxf>=9.0"]
+fits = ["astropy>=5.0"]
+dev = ["pytest>=7", "ppxf>=9.0", "astropy>=5.0"]
 
 [project.urls]
 Homepage = "https://github.com/Babapei/starlight"

@@ -23,7 +23,9 @@ pp = fit_ppxf(wave, flux, templates, template_wave, error=err)
 print(pp.velocity, pp.sigma)
 ```
 
-当前做到 **阶段 B3**（离网运动学收回；C 已跳过）。断点见 [docs/PROGRESS.md](docs/PROGRESS.md)。
+`easyppxf.load_sdss_fits` 只读一维谱；拟合请引用 Cappellari，不要把本包装成一种新方法。SDSS FITS 需要 `pip install astropy`（或 `.[fits]` / `.[dev]`）。
+
+当前做到 **阶段 D**（clip + EX0；v0.1）。断点见 [docs/PROGRESS.md](docs/PROGRESS.md)。
 
 算法出处：Cid Fernandes et al. 2005（STARLIGHT）。`easyppxf` 用 pPXF 时请引用 Cappellari。本库是 MIT 许可的软件，不是那两篇论文的官方实现。
 
