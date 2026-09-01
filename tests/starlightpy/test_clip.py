@@ -26,9 +26,10 @@ def test_nsigma_clip_ignores_spike_and_recovers():
     spike = int(np.argmin(np.abs(wave - 4500.0)))
     assert not (4010.0 <= wave[spike] <= 4060.0)
     flux = flux.copy()
-    flux[spike] = float(np.median(flux)) * 40.0
+    flux[spike] = flux[spike] + 10.0 * err[spike]
     result = fit_spectrum(wave, flux, err, bases, config=config)
     assert result.n_clipped >= 1
+    assert result.n_clipped <= 5
     assert abs(result.a_v - true_av) <= 0.10
     np.testing.assert_allclose(result.x_fraction, true_x, atol=0.12)
 
