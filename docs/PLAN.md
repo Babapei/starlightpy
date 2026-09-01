@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-01（B 拆成 B1–B3；PROGRESS 当断点）
+最后更新：2026-09-01（B3 与 PROGRESS 对齐：真值不落网格点）
 
 ---
 
@@ -80,8 +80,8 @@ M_\lambda = \left(\sum_j x_j\, b_{j,\lambda}\, r_\lambda(A_V)\right) \otimes G(v
 
 | 文件 | 职责 | 现在 | 以后才做 |
 | --- | --- | --- | --- |
-| `config.py` | `FitConfig`：归一窗口、\(A_V\) 网格、消光定律、运动学初值 | 有 | 退火温度表、clip 阈值 |
-| `io.py` | ASCII 谱 / mask / base master；`resample_to` | 有 | gzip SSP、FITS |
+| `config.py` | `FitConfig`：归一窗口、\(A_V\) 网格、消光定律、运动学初值 | 有（含 `clip_nsigma` / `x_min_keep` 字段，阶段 D 才启用） | 退火温度表 |
+| `io.py` | ASCII 谱 / mask / base master；`resample_to` | 有 | gzip SSP、SDSS FITS、目录循环 |
 | `extinction.py` | \(q_\lambda=A_\lambda/A_V\)：CCM（含 Fa/Fb）、CAL、Gordon | 有 CCM/CAL/GD | HyperZ 表 |
 | `model.py` | 红化后的线性组合 | 有 | AYV |
 | `kinematics.py` | 均匀 lnλ 上的高斯 LOSVD（\(v_\star,\sigma_\star\)） | 有（已按速度空间修正） | 与仪器分辨率匹配 |
@@ -132,7 +132,7 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 
 - [x] **B1** 合成器：吸收线模板 + 与拟合器同一套前向模型（红化 → 混合 → LOSVD）造 \(O_\lambda\)。固定真值 \(v,\sigma\) 时，现有 NNLS+\(A_V\) 仍能收回 \(x,A_V\)。
 - [x] **B2** `search_kinematics=True`：外层粗搜 \(v,\sigma\)，内层仍 \(A_V\)+NNLS。字段：`v_bounds` / `v_step` / `sigma_bounds` / `sigma_step`。
-- [ ] **B3** 吸收线合成谱收回 \(v\approx 100\)、\(\sigma\approx 150\)（第一轮 \(|\Delta v|<50\)、\(|\Delta\sigma|<80\)）。
+- [ ] **B3** 真值**不落在网格节点上**时仍收回（例如 \(v=80\)、\(\sigma=130\)），确认是 χ² 最小而不是踩点。无噪声容差不宽于 B2；再加一组不同 \(x,A_V\)。B2 已满足第一轮 \(|\Delta v|\le 50\)、\(|\Delta\sigma|\le 50\)。
 
 未完成 B 前不要退火，不要拟合真星系。
 
@@ -171,7 +171,7 @@ Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，
 1. 用 `build_model` + `apply_losvd` 造无噪声 \(M\)
 2. 加高斯噪声（给定 SNR）
 3. `fit_spectrum` 只看见 \(O,e,b\)
-4. 断言写在 `tests/starlightpy/test_recovery.py`
+4. 断言写在 `tests/starlightpy/`（混合物/尘埃：`test_recovery.py`；运动学搜索：`test_kinematics_search.py`；clip：`test_clip.py`）
 
 禁止：用和拟合器同一套近似去「验收自己」却不经过 `fit_spectrum`；禁止只画图不 assert。
 
@@ -231,7 +231,7 @@ Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。B2 已完成；下一小段是 **B3**。
+见 [docs/PROGRESS.md](PROGRESS.md)。B2 已完成；当前小段是 **B3**。
 
 ---
 
