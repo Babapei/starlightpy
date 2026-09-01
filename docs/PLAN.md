@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-08-31（补充：从头设计会怎样；遗留 easyppxf 不扩张）
+最后更新：2026-09-01（B 拆成 B1–B3；PROGRESS 当断点）
 
 ---
 
@@ -128,9 +128,13 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 
 ### 阶段 B — 运动学进入拟合
 
-- 先确认 `apply_losvd` 在均匀 lnλ 上（吸收线红移测试已有）。再对 \(v,\sigma\) 做**粗网格**，内层仍是 \(A_V\) 网格 + NNLS。
-- 合成谱必须带吸收线；\(v=100\) km/s、\(\sigma=150\) km/s 量级。第一轮验收放宽（如 \(|\Delta v|<50\)、\(|\Delta\sigma|<80\)），再收紧。
-- 未完成前不要退火，不要拟合真星系。
+拆成小段，每段在 [docs/PROGRESS.md](PROGRESS.md) 打勾后才能做下一段。
+
+- [x] **B1** 合成器：吸收线模板 + 与拟合器同一套前向模型（红化 → 混合 → LOSVD）造 \(O_\lambda\)。固定真值 \(v,\sigma\) 时，现有 NNLS+\(A_V\) 仍能收回 \(x,A_V\)。
+- [ ] **B2** `search_kinematics=True`：外层粗搜 \(v,\sigma\)，内层仍 \(A_V\)+NNLS。白名单补齐网格字段后再改 `FitConfig`。
+- [ ] **B3** 吸收线合成谱收回 \(v\approx 100\)、\(\sigma\approx 150\)（第一轮 \(|\Delta v|<50\)、\(|\Delta\sigma|<80\)）。
+
+未完成 B 前不要退火，不要拟合真星系。
 
 ### 阶段 C — 只改进非线性参数的搜索（可选）
 
@@ -225,15 +229,13 @@ Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，
 
 ## 10. 当前下一步
 
-1. 保持测试绿色。
-2. 阶段 B：运动学搜索。合成谱用吸收线模板。先确认 LOSVD 红移测试仍绿。
-3. 不要先写退火，不要对 \(x_j\) 做 Metropolis。
+见 [docs/PROGRESS.md](PROGRESS.md)。现在做阶段 **B1**（合成器），不要跳到 B2。
 
 ---
 
 ## 11. 仓库规范（文档怎么管、代码怎么长）
 
-权威顺序：**PLAN > README > 代码注释 > 聊天。** 聊天里的话不改 PLAN 就不算数。
+权威顺序：**PLAN > PROGRESS > README > 代码注释 > 聊天。** 做到哪只认 [docs/PROGRESS.md](PROGRESS.md)；目标仍只认本文。
 
 不要再开「设计思想 / 架构愿景」第三份长文。阶段勾选、验收数字、禁止项都写在本文。
 

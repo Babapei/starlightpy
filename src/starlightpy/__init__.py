@@ -6,6 +6,7 @@ from .fit import FitResult, fit_spectrum
 from .io import apply_mask, load_base_master, load_base_spectra, load_mask, load_spectrum, resample_to
 from .kinematics import apply_losvd
 from .model import build_model, normalize_at
+from .simulate import default_absorption_bases, mock_observation
 
 __all__ = [
     "FitConfig",
@@ -19,6 +20,8 @@ __all__ = [
     "load_base_spectra",
     "load_mask",
     "load_spectrum",
+    "default_absorption_bases",
+    "mock_observation",
     "normalize_at",
     "resample_to",
 ]

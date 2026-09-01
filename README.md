@@ -23,7 +23,7 @@ pp = fit_ppxf(wave, flux, templates, template_wave, error=err)
 print(pp.velocity, pp.sigma)
 ```
 
-当前做到 **阶段 A**（框架）。下一步只做阶段 B（运动学搜索），见 PLAN。
+当前做到 **阶段 B1**（合成器）。断点见 [docs/PROGRESS.md](docs/PROGRESS.md)，合同见 [docs/PLAN.md](docs/PLAN.md)。
 
 算法出处：Cid Fernandes et al. 2005（STARLIGHT）。`easyppxf` 用 pPXF 时请引用 Cappellari。本库是 MIT 许可的软件，不是那两篇论文的官方实现。
 
