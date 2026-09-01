@@ -1,5 +1,6 @@
 """STARLIGHT-style spectral fitting (not a Fortran clone). See docs/PLAN.md."""
 
+from .clip import clip_and_refit, clip_outliers, keep_components
 from .config import FitConfig
 from .extinction import get_extinction_curve
 from .fit import FitResult, fit_spectrum
@@ -20,6 +21,9 @@ __all__ = [
     "load_base_spectra",
     "load_mask",
     "load_spectrum",
+    "clip_and_refit",
+    "clip_outliers",
+    "keep_components",
     "default_absorption_bases",
     "mock_observation",
     "normalize_at",

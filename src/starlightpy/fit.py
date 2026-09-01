@@ -9,6 +9,7 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import nnls
 
+from .clip import clip_outliers, keep_components
 from .config import FitConfig
 from .extinction import get_extinction_curve
 from .kinematics import apply_losvd
@@ -28,6 +29,7 @@ class FitResult:
     n_good: int
     a_v_grid: NDArray[np.float64]
     chi2_grid: NDArray[np.float64]
+    n_clipped: int = 0
 
 
 def _weights(error: NDArray[np.float64], good: NDArray[np.bool_]) -> NDArray[np.float64]:
@@ -102,11 +104,9 @@ def fit_spectrum(
     mask: Optional[ArrayLike] = None,
     config: Optional[FitConfig] = None,
 ) -> FitResult:
-    """Fit x_j and A_V; optionally grid-search v and sigma (PLAN B2)."""
+    """Fit x_j and A_V; optionally grid-search v and sigma; clip/EX0 if configured."""
     if config is None:
         config = FitConfig()
-    if config.clip_nsigma is not None:
-        raise NotImplementedError("Clipping is PLAN phase D.")
 
     wave = np.asarray(wavelengths, dtype=float)
     obs = np.asarray(flux, dtype=float)
@@ -158,8 +158,49 @@ def fit_spectrum(
         v_opt = config.v0_kms
         s_opt = config.sigma_kms
 
+    n_clipped = 0
+    if config.clip_nsigma is not None:
+        clipped_good = clip_outliers(obs_n, model_n, err_n, config.clip_nsigma, good)
+        n_clipped = int(np.sum(good & ~clipped_good))
+        if n_clipped > 0:
+            good = clipped_good
+            weights = _weights(err_n, good)
+            x_opt, a_v_opt, model_n, chi2, chi2_av = _best_av_for_kinematics(
+                wave,
+                obs_n,
+                weights,
+                bases_n,
+                q,
+                q0,
+                a_v_grid,
+                v_opt,
+                s_opt,
+            )
+
+    n_used = n_comp
+    if config.x_min_keep > 0:
+        x_sum = float(np.sum(x_opt))
+        x_frac_now = x_opt / x_sum if x_sum > 0 else x_opt
+        keep = keep_components(x_frac_now, config.x_min_keep)
+        if np.any(~keep):
+            x_sub, a_v_opt, model_n, chi2, chi2_av = _best_av_for_kinematics(
+                wave,
+                obs_n,
+                weights,
+                bases_n[:, keep],
+                q,
+                q0,
+                a_v_grid,
+                v_opt,
+                s_opt,
+            )
+            x_full = np.zeros(n_comp, dtype=float)
+            x_full[keep] = x_sub
+            x_opt = x_full
+            n_used = int(np.sum(keep))
+
     n_good = int(np.sum(weights > 0))
-    dof = max(n_good - n_comp - 1, 1)
+    dof = max(n_good - n_used - 1, 1)
     x_sum = float(np.sum(x_opt))
     x_frac = x_opt / x_sum if x_sum > 0 else x_opt
     return FitResult(
@@ -174,4 +215,5 @@ def fit_spectrum(
         n_good=n_good,
         a_v_grid=a_v_grid,
         chi2_grid=chi2_av,
+        n_clipped=n_clipped,
     )
