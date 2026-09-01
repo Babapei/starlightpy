@@ -89,6 +89,14 @@ def test_load_base(tmp_path: Path):
     assert matrix[1, 1] == 4.0
 
 
+def test_starlightpy_sources_do_not_import_easyppxf():
+    root = Path(__file__).resolve().parents[2] / "src" / "starlightpy"
+    for path in root.glob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        assert "import easyppxf" not in text
+        assert "from easyppxf" not in text
+
+
 def test_load_sdss_fits_table(tmp_path: Path):
     pytest.importorskip("astropy")
     from astropy.table import Table

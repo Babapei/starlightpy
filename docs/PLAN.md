@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-01（B3 与 PROGRESS 对齐：真值不落网格点）
+最后更新：2026-09-01（A+B+D+E 完成；C 跳过）
 
 ---
 
@@ -80,12 +80,12 @@ M_\lambda = \left(\sum_j x_j\, b_{j,\lambda}\, r_\lambda(A_V)\right) \otimes G(v
 
 | 文件 | 职责 | 现在 | 以后才做 |
 | --- | --- | --- | --- |
-| `config.py` | `FitConfig`：归一窗口、\(A_V\) 网格、消光定律、运动学初值 | 有（含 `clip_nsigma` / `x_min_keep` 字段，阶段 D 才启用） | 退火温度表 |
-| `io.py` | ASCII 谱 / mask / base master；`resample_to` | 有 | gzip SSP、SDSS FITS、目录循环 |
+| `config.py` | `FitConfig`：归一窗口、\(A_V\) 网格、消光定律、运动学、clip/EX0 阈值 | 有 | 不要加退火温度表（C 已跳过） |
+| `io.py` | ASCII `.cxt` / mask / base master；`resample_to`；gzip；目录循环；可选 SDSS FITS | 有 | HyperZ 无关；不要作业调度 |
 | `extinction.py` | \(q_\lambda=A_\lambda/A_V\)：CCM（含 Fa/Fb）、CAL、Gordon | 有 CCM/CAL/GD | HyperZ 表 |
 | `model.py` | 红化后的线性组合 | 有 | AYV |
 | `kinematics.py` | 均匀 lnλ 上的高斯 LOSVD（\(v_\star,\sigma_\star\)） | 有（已按速度空间修正） | 与仪器分辨率匹配 |
-| `fit.py` | 优化：\(x_j\) **永远 NNLS**；\(A_V\) 网格（阶段 A）；\(v,\sigma\) 外层搜索（阶段 B） | 有原型 | 阶段 C 只加密非线性参数 |
+| `fit.py` | \(x_j\) **永远 NNLS**；\(A_V\) 网格；\(v,\sigma\) 外层搜索；clip/EX0 | 有 | 阶段 C 已跳过 |
 | `clip.py` | 残差 clip 再拟合 | 有 NSIGMA clip + EX0 分量裁剪 | — |
 | `optimize.py` | 可选：对 \((A_V,v,\sigma)\) 退火 | 占位（阶段 C 已跳过） | **禁止对 \(x_j\) 做 Metropolis** |
 
@@ -150,15 +150,15 @@ Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，
 
 ### 阶段 E — 输入体验（次要）
 
-- [ ] 读 STARLIGHT 的 `.cxt`（含可选 Npix 行、`flag≥2`）/ mask / base master；gzip SSP
-- [ ] 可选：SDSS 一维 FITS（`starlightpy` 与 `easyppxf` 各一份 loader，不硬耦合）
-- [ ] 批量：目录循环 `iter_ascii_spectra`
+- [x] 读 STARLIGHT 的 `.cxt`（含可选 Npix 行、`flag≥2`）/ mask / base master；gzip SSP
+- [x] 可选：SDSS 一维 FITS（`starlightpy` 与 `easyppxf` 各一份 loader，不硬耦合）
+- [x] 批量：目录循环 `iter_ascii_spectra`
 
 ### 阶段 F — `easyppxf` 补强（永远低于 A–D）
 
 - 文档示例用用户自己的模板
 - 不要捆绑下载 E-MILES 进本仓库
-- 需要时再加 SDSS FITS 读入；加完必须在文档写「引 Cappellari」
+- [x] SDSS FITS 读入已在阶段 E 各写一份；README 写明拟合引 Cappellari。不要再为 `easyppxf` 加功能。
 
 ---
 
@@ -229,7 +229,7 @@ Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。A+B+D 已完成（v0.1）；当前是 **阶段 E**（文件读入）。
+见 [docs/PROGRESS.md](PROGRESS.md)。合同内完整（A+B+D+E）已达到。不要做 \(\mu_j\) / AYV / 仪器 FWHM / 真星系拟合；不要再长 `easyppxf`。
 
 ---
 

@@ -35,3 +35,11 @@ def test_easyppxf_load_sdss_fits_is_independent(tmp_path: Path):
     np.testing.assert_allclose(out_flux, flux)
     assert np.all(good)
     assert out_err.shape == flux.shape
+
+
+def test_easyppxf_sources_do_not_import_starlightpy():
+    root = Path(__file__).resolve().parents[2] / "src" / "easyppxf"
+    for path in root.glob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        assert "import starlightpy" not in text
+        assert "from starlightpy" not in text
