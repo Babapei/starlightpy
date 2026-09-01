@@ -132,17 +132,15 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 
 - [x] **B1** 合成器：吸收线模板 + 与拟合器同一套前向模型（红化 → 混合 → LOSVD）造 \(O_\lambda\)。固定真值 \(v,\sigma\) 时，现有 NNLS+\(A_V\) 仍能收回 \(x,A_V\)。
 - [x] **B2** `search_kinematics=True`：外层粗搜 \(v,\sigma\)，内层仍 \(A_V\)+NNLS。字段：`v_bounds` / `v_step` / `sigma_bounds` / `sigma_step`。
-- [ ] **B3** 真值**不落在网格节点上**时仍收回（例如 \(v=80\)、\(\sigma=130\)），确认是 χ² 最小而不是踩点。无噪声容差不宽于 B2；再加一组不同 \(x,A_V\)。B2 已满足第一轮 \(|\Delta v|\le 50\)、\(|\Delta\sigma|\le 50\)。
+- [x] **B3** 真值**不落在网格节点上**时仍收回（例如 \(v=80\)、\(\sigma=130\)），确认是 χ² 最小而不是踩点。无噪声容差不宽于 B2；再加一组不同 \(x,A_V\)。B2 已满足第一轮 \(|\Delta v|\le 50\)、\(|\Delta\sigma|\le 50\)。
 
 未完成 B 前不要退火，不要拟合真星系。
 
-### 阶段 C — 只改进非线性参数的搜索（可选）
+### 阶段 C — 只改进非线性参数的搜索（跳过）
 
 Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，不是物理要求。\(x_j\) 在固定 \((A_V,v,\sigma)\) 下是线性非负最小二乘。**对 \(x_j\) 做退火会更慢、更不稳，阶段 B 的 χ² 还可能变差。**
 
-阶段 C 若做：只对 \((A_V, v_\star, \sigma_\star)\) 做更细的网格或短退火；\(x_j\) 仍 NNLS。3～5 个随机起点即可。不要把 Fortran 配置项搬进来。
-
-验收：同一合成谱，χ² **不差于** 阶段 B；\(A_V\sim 1\) 不系统性崩。若网格已经够，本阶段可以跳过并在本文注明。
+- [x] **跳过（2026-09-01）。** B3 在 25 km/s 网格上已收回离网真值（\(|\Delta v|\le 25\)、\(|\Delta\sigma|\le 25\)）。再加密或短退火不改变 v0.1。`optimize.py` 保持占位；**禁止对 \(x_j\) 做 Metropolis**。
 
 ### 阶段 D — clip 与稀疏 \(x\)
 
@@ -231,7 +229,7 @@ Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。B2 已完成；当前小段是 **B3**。
+见 [docs/PROGRESS.md](PROGRESS.md)。B 已完成、C 已跳过；当前是 **阶段 D**（clip + EX0）。
 
 ---
 
@@ -257,7 +255,7 @@ Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，
 
 **出处（不是投稿）：** 文档注明算法来自 Cid Fernandes et al. 2005；`easyppxf` 注明 Cappellari。LICENSE 为 MIT。
 
-**何时算第一版做完（免得永远加功能）：** 阶段 A + B + D，合成谱能收回 \(x\)（少模板）、\(A_V\)、\(v,\sigma\)，并支持 mask + clip。质量权重 \(μ_j\)、AYV、仪器 FWHM、真巡天 FITS 都不是 v0.1 门槛。阶段 C 可跳过。
+**何时算第一版做完（免得永远加功能）：** 阶段 A + B + D，合成谱能收回 \(x\)（少模板）、\(A_V\)、\(v,\sigma\)，并支持 mask + clip。质量权重 \(μ_j\)、AYV、仪器 FWHM、真巡天 FITS 都不是 v0.1 门槛。阶段 C 已跳过。
 
 ---
 
