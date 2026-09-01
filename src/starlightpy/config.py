@@ -16,5 +16,9 @@ class FitConfig:
     v0_kms: float = 0.0
     sigma_kms: float = 0.0
     search_kinematics: bool = False
+    v_bounds: Tuple[float, float] = (-300.0, 300.0)
+    v_step: float = 50.0
+    sigma_bounds: Tuple[float, float] = (40.0, 250.0)
+    sigma_step: float = 50.0
     clip_nsigma: Optional[float] = None
     x_min_keep: float = 0.0

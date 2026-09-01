@@ -131,7 +131,7 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 拆成小段，每段在 [docs/PROGRESS.md](PROGRESS.md) 打勾后才能做下一段。
 
 - [x] **B1** 合成器：吸收线模板 + 与拟合器同一套前向模型（红化 → 混合 → LOSVD）造 \(O_\lambda\)。固定真值 \(v,\sigma\) 时，现有 NNLS+\(A_V\) 仍能收回 \(x,A_V\)。
-- [ ] **B2** `search_kinematics=True`：外层粗搜 \(v,\sigma\)，内层仍 \(A_V\)+NNLS。白名单补齐网格字段后再改 `FitConfig`。
+- [x] **B2** `search_kinematics=True`：外层粗搜 \(v,\sigma\)，内层仍 \(A_V\)+NNLS。字段：`v_bounds` / `v_step` / `sigma_bounds` / `sigma_step`。
 - [ ] **B3** 吸收线合成谱收回 \(v\approx 100\)、\(\sigma\approx 150\)（第一轮 \(|\Delta v|<50\)、\(|\Delta\sigma|<80\)）。
 
 未完成 B 前不要退火，不要拟合真星系。
@@ -187,8 +187,10 @@ Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，
 - `law: str`（CCM / CAL / GD1 / GD2 / GD3）
 - `r_v: float`
 - `a_v_bounds, a_v_step`
-- `v0_kms, sigma_kms`（阶段 A 可当固定值；阶段 B 起可搜索）
-- `search_kinematics: bool`（阶段 B 才允许 True）
+- `v0_kms, sigma_kms`（`search_kinematics=False` 时使用的固定值）
+- `search_kinematics: bool`
+- `v_bounds, v_step`（仅 `search_kinematics=True`；单位 km/s）
+- `sigma_bounds, sigma_step`（仅搜索时；σ 网格不宜含过大一段 0，默认下限 40 km/s）
 - `clip_nsigma: float | None`（阶段 D 才用）
 - `x_min_keep: float`（阶段 D）
 
@@ -229,7 +231,7 @@ Fortran STARLIGHT 对 \(x_j\) 也走 Metropolis，是 2005 年的实现选择，
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。B1 已完成；下一小段是 **B2**。
+见 [docs/PROGRESS.md](PROGRESS.md)。B2 已完成；下一小段是 **B3**。
 
 ---
 

@@ -6,7 +6,7 @@ from starlightpy.clip import clip_and_refit
 from starlightpy.optimize import metropolis_anneal
 
 
-def test_phase_gates_are_closed():
+def test_phase_gates_anneal_and_clip_still_closed():
     with pytest.raises(NotImplementedError):
         metropolis_anneal()
     with pytest.raises(NotImplementedError):
@@ -17,5 +17,5 @@ def test_phase_gates_are_closed():
             np.ones(55),
             np.ones(55),
             np.ones((55, 2)),
-            config=FitConfig(search_kinematics=True),
+            config=FitConfig(clip_nsigma=3.0),
         )
