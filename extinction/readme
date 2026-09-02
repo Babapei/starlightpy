@@ -1,5 +1,0 @@
-2025.4.13 18:10
-在写完extinction.py可以
-    1.用这个 q_lambda 传给我们刚刚写好的 build_model()
-    2.添加更多红化定律（如 CAL, GD1 等）
-    3.写 fit_model()，实现 x_j、A_V 拟合
