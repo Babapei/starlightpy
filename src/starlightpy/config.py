@@ -34,3 +34,5 @@ class FitConfig:
     error_method: Optional[str] = None
     n_repeat: int = 8
     repeat_seed: int = 0
+    pad_losvd: bool = False
+    losvd_oversample: int = 1

@@ -17,7 +17,7 @@ from .io import (
     load_spectrum,
     resample_to,
 )
-from .kinematics import apply_losvd
+from .kinematics import apply_losvd, losvd_design
 from .model import build_model, normalize_at
 from .preprocess import (
     air_to_vacuum,
@@ -40,6 +40,7 @@ __all__ = [
     "FitConfig",
     "FitResult",
     "apply_losvd",
+    "losvd_design",
     "apply_mask",
     "build_model",
     "fit_spectrum",
