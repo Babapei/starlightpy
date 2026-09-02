@@ -15,6 +15,7 @@ from .config import FitConfig
 from .extinction import get_extinction_curve
 from .kinematics import apply_losvd
 from .model import build_model, normalize_at, normalize_bases, reddening_factor
+from .preprocess import align_observation
 
 
 @dataclass
@@ -129,6 +130,15 @@ def fit_spectrum(
         raise ValueError("flux contains non-finite values.")
     if not np.all(np.isfinite(bases)):
         raise ValueError("base_matrix contains non-finite values.")
+
+    if config.redshift < 0:
+        raise ValueError("redshift must be >= 0.")
+    if config.wave_frame.lower() not in ("as_is", "air", "vacuum"):
+        raise ValueError("wave_frame must be 'as_is', 'air', or 'vacuum'.")
+    if config.redshift != 0.0 or config.wave_frame.lower() == "air":
+        obs, err = align_observation(
+            wave, obs, err, redshift=config.redshift, wave_frame=config.wave_frame
+        )
 
     good = np.ones(n_wave, dtype=bool) if mask is None else np.asarray(mask, dtype=bool)
     if good.shape != (n_wave,):

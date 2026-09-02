@@ -22,3 +22,5 @@ class FitConfig:
     sigma_step: float = 50.0
     clip_nsigma: Optional[float] = None
     x_min_keep: float = 0.0
+    redshift: float = 0.0
+    wave_frame: str = "as_is"
