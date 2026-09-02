@@ -17,6 +17,7 @@ from .kinematics import apply_losvd
 from .model import build_model, normalize_at, normalize_bases, reddening_factor
 from .preprocess import align_observation, estimate_rms_error, match_instrumental_fwhm
 from .refine import refine_av_v_sigma
+from .regularize import XRegularizer
 
 
 @dataclass
@@ -64,6 +65,7 @@ def _design_and_nnls(
     a_v: float,
     v0_kms: float,
     sigma_kms: float,
+    x_reg: Optional[XRegularizer] = None,
 ) -> Tuple[NDArray[np.float64], NDArray[np.float64], float]:
     r = reddening_factor(q, a_v, q0)
     reddened = bases_n * r[:, None]
@@ -71,7 +73,12 @@ def _design_and_nnls(
     design = np.empty_like(reddened)
     for j in range(n_comp):
         design[:, j] = apply_losvd(wave, reddened[:, j], v0_kms, sigma_kms)
-    x_hat, _ = nnls(design * weights[:, None], obs_n * weights)
+    weighted_design = design * weights[:, None]
+    weighted_obs = obs_n * weights
+    if x_reg is None:
+        x_hat, _ = nnls(weighted_design, weighted_obs)
+    else:
+        x_hat = x_reg.solve(weighted_design, weighted_obs)
     model = apply_losvd(wave, build_model(x_hat, bases_n, q, a_v, q_lambda0=q0), v0_kms, sigma_kms)
     chi2 = float(np.sum(((obs_n - model) * weights) ** 2))
     return x_hat, model, chi2
@@ -87,6 +94,7 @@ def _best_av_for_kinematics(
     a_v_grid: NDArray[np.float64],
     v0_kms: float,
     sigma_kms: float,
+    x_reg: Optional[XRegularizer] = None,
 ) -> Tuple[NDArray[np.float64], float, NDArray[np.float64], float, NDArray[np.float64]]:
     n_comp = bases_n.shape[1]
     chi2_grid = np.empty(a_v_grid.size)
@@ -94,7 +102,7 @@ def _best_av_for_kinematics(
     models = np.empty((a_v_grid.size, wave.size))
     for i, a_v in enumerate(a_v_grid):
         x_hat, model, chi2 = _design_and_nnls(
-            wave, obs_n, weights, bases_n, q, q0, float(a_v), v0_kms, sigma_kms
+            wave, obs_n, weights, bases_n, q, q0, float(a_v), v0_kms, sigma_kms, x_reg=x_reg
         )
         x_grid[i] = x_hat
         models[i] = model
@@ -110,6 +118,7 @@ def fit_spectrum(
     base_matrix: ArrayLike,
     mask: Optional[ArrayLike] = None,
     config: Optional[FitConfig] = None,
+    template_ages: Optional[ArrayLike] = None,
 ) -> FitResult:
     """Fit x_j and A_V; optionally grid-search v and sigma; clip/EX0 if configured."""
     if config is None:
@@ -137,6 +146,14 @@ def fit_spectrum(
         raise ValueError("flux contains non-finite values.")
     if not np.all(np.isfinite(bases)):
         raise ValueError("base_matrix contains non-finite values.")
+
+    x_reg = XRegularizer.from_config(
+        config.regularize_x,
+        template_ages,
+        n_comp,
+        config.regularize_strength,
+        config.age_bin_edges,
+    )
 
     if config.redshift < 0:
         raise ValueError("redshift must be >= 0.")
@@ -200,7 +217,7 @@ def fit_spectrum(
         for v0 in v_grid:
             for sig in s_grid:
                 x_hat, a_v, model_n, chi2, chi2_av = _best_av_for_kinematics(
-                    wave, obs_n, weights, bases_n, q, q0, a_v_grid, float(v0), float(sig)
+                    wave, obs_n, weights, bases_n, q, q0, a_v_grid, float(v0), float(sig), x_reg=x_reg
                 )
                 if best is None or chi2 < best[0]:
                     best = (chi2, x_hat, a_v, model_n, chi2_av, float(v0), float(sig))
@@ -218,13 +235,14 @@ def fit_spectrum(
             a_v_grid,
             config.v0_kms,
             config.sigma_kms,
+            x_reg=x_reg,
         )
         v_opt = config.v0_kms
         s_opt = config.sigma_kms
 
     if config.refine_kinematics:
         def _eval(av: float, vv: float, ss: float):
-            return _design_and_nnls(wave, obs_n, weights, bases_n, q, q0, av, vv, ss)
+            return _design_and_nnls(wave, obs_n, weights, bases_n, q, q0, av, vv, ss, x_reg=x_reg)
 
         x_opt, a_v_opt, model_n, chi2, v_opt, s_opt = refine_av_v_sigma(
             _eval,
@@ -240,7 +258,7 @@ def fit_spectrum(
             vary_kinematics=config.search_kinematics,
         )
         _, _, _, _, chi2_av = _best_av_for_kinematics(
-            wave, obs_n, weights, bases_n, q, q0, a_v_grid, v_opt, s_opt
+            wave, obs_n, weights, bases_n, q, q0, a_v_grid, v_opt, s_opt, x_reg=x_reg
         )
 
     n_clipped = 0
@@ -260,6 +278,7 @@ def fit_spectrum(
                 a_v_grid,
                 v_opt,
                 s_opt,
+                x_reg=x_reg,
             )
 
     n_used = n_comp
@@ -279,6 +298,7 @@ def fit_spectrum(
                 a_v_grid,
                 v_opt,
                 s_opt,
+                x_reg=x_reg.restrict(keep) if x_reg is not None else None,
             )
             x_full = np.zeros(n_comp, dtype=float)
             x_full[keep] = x_sub

@@ -28,3 +28,6 @@ class FitConfig:
     fwhm_template: Optional[float] = None
     estimate_error: bool = False
     refine_kinematics: bool = False
+    regularize_x: Optional[str] = None
+    regularize_strength: float = 1.0
+    age_bin_edges: Optional[Tuple[float, ...]] = None
