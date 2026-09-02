@@ -28,6 +28,12 @@ from .preprocess import (
     to_rest_frame,
     vacuum_to_air,
 )
+from .products import (
+    light_to_mass,
+    light_weighted_age,
+    light_weighted_mean,
+    light_weighted_metallicity,
+)
 from .simulate import default_absorption_bases, mock_observation
 
 __all__ = [
@@ -61,6 +67,10 @@ __all__ = [
     "vacuum_to_air",
     "normalize_at",
     "resample_to",
+    "light_to_mass",
+    "light_weighted_age",
+    "light_weighted_mean",
+    "light_weighted_metallicity",
 ]
 
 __version__ = "0.1.0"
