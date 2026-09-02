@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-02（H3 完成；下一刀 H4）
+最后更新：2026-09-02（H4 完成；下一刀 H5）
 
 ---
 
@@ -102,8 +102,8 @@ G（1.x）已完成。阶段 H 进行中：一次一个小段，默认关，先�
 | --- | --- | --- | --- |
 | `config.py` | `FitConfig` 白名单 | 有 v0.1 字段 | G 预告字段见 §7；不要加退火温度表 |
 | `io.py` | `.cxt` / mask / base / gzip / FITS / `iter_ascii_spectra` / `resample_to` | 有 | 不要作业调度 |
-| `extinction.py` | \(q_\lambda=A_\lambda/A_V\)：CCM、CAL、Gordon | 有 | H：可选 `dust_extinction` |
-| `model.py` | 红化后的线性组合 | 有 | H：可选 AYV |
+| `extinction.py` | \(q_\lambda=A_\lambda/A_V\)：CCM、CAL、Gordon | 有 | H5：可选 `dust_extinction` |
+| `model.py` | 红化后的线性组合；H4 可选按年轻旗标加 \(A_{YV}\) | 有 | — |
 | `kinematics.py` | 均匀 lnλ 上的高斯 LOSVD | 有 | H3：垫边/密采样/设计矩阵预计算 |
 | `fit.py` | NNLS；\(A_V\) 与 \(v,\sigma\) 网格；clip/EX0；`FitResult` | 有 | G1 字段已加；G5 局部加密（`refine.py`） |
 | `clip.py` | NSIGMA clip + EX0 | 有 | — |
@@ -210,7 +210,7 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 - [x] **H1** 多模板非负正则或按年龄箱（仍 NNLS；需 `template_ages`）
 - [x] **H2** χ² 切片或重复拟合的粗误差
 - [x] **H3** LOSVD 垫边 / 更密速度采样；同一 \((v,\sigma)\) 预计算设计矩阵
-- [ ] **H4** 可选 AYV（年轻旗标 + 有/无 AYV 两套真值）
+- [x] **H4** 可选 AYV（年轻旗标 + 有/无 AYV 两套真值）
 - [ ] **H5** 可选 `dust_extinction`
 - [ ] **H6** 自己的 npz/json 存盘（不是 Fortran `.out`）
 
@@ -229,7 +229,8 @@ G2–G4 额外：**先做错预处理 → 参数应偏；做对 → 收回。**
 G6：测试必须自带假 \(M/L\)（或假年龄/Z）；无元数据必须 raise。  
 G5：与 B3 同一类离网真值，加密后更近或 χ² 不差于粗网格。
 
-H1：简并多模板时，未正则箱内分量不平分；年龄箱或平滑后箱内光和收回，且 \(x_j\ge 0\)。
+H1：简并多模板时，未正则箱内分量不平分；年龄箱或平滑后箱内光和收回，且 \(x_j\ge 0\)。  
+H4：年轻模板真值带 \(A_{YV}\) 时，打开 `fit_ayv` 能收回；关掉则 χ² 更大或 \(A_V\) 偏。
 
 禁止：用和拟合器同一套近似去「验收自己」却不经过 `fit_spectrum`；禁止只画图不 assert；禁止用真巡天谱当单元测试绿灯。
 
@@ -264,13 +265,16 @@ H1：简并多模板时，未正则箱内分量不平分；年龄箱或平滑后
 - `repeat_seed: int`（H2）
 - `pad_losvd: bool`（H3；默认关）
 - `losvd_oversample: int`（H3；均匀 lnλ 加密倍数，默认 1）
+- `fit_ayv: bool`（H4；默认关）
+- `a_yv_bounds`, `a_yv_step`（H4）
 
 `fit_spectrum(..., template_ages=)` 不是 `FitConfig` 字段：年龄是模板元数据，长度必须等于成分数。未开正则时忽略。
 
+`fit_spectrum(..., young_flags=)` 也不是 `FitConfig` 字段：年轻旗标是模板元数据，长度必须等于成分数。未开 `fit_ayv` 时忽略。
+
 **阶段 H 预告（实现对应小段时才写进代码）：**
 
-- `fit_ayv: bool`（H4；默认关）
-- `a_yv_bounds`, `a_yv_step`（H4）
+- `law` 可取 `dust:<Model>`（H5；例如 `dust:F99`）。未装 `dust_extinction` 时明确报错。默认仍是自带 CCM / CAL / Gordon。
 
 不要加：N_chains、Fortran 同名配置几十条、学习率、CNN 权重路径、`anneal_x`、`fit_emission`、`search_redshift`。
 
@@ -312,7 +316,7 @@ H1：简并多模板时，未正则箱内分量不平分；年龄箱或平滑后
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。当前小段是 **H4**（可选 AYV）。未完成 H4 不要做 H5。
+见 [docs/PROGRESS.md](PROGRESS.md)。当前小段是 **H5**（可选 `dust_extinction`）。未完成 H5 不要做 H6。
 
 ---
 

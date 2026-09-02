@@ -7,7 +7,7 @@
 | 项 | 值 |
 | --- | --- |
 | 阶段 | H（研究可用） |
-| 小段 | **H3 已完成**；下一刀 **H4** |
+| 小段 | **H4 已完成**；下一刀 **H5** |
 | 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、再长 `easyppxf`、未写验收就开下一 H 项 |
 
 ## 小段清单
@@ -38,7 +38,7 @@
 - [x] **H1** 多模板非负正则或按年龄箱
 - [x] H2 χ² 切片 / 粗误差
 - [x] H3 LOSVD 垫边与设计矩阵预计算
-- [ ] H4 可选 AYV
+- [x] H4 可选 AYV
 - [ ] H5 可选 `dust_extinction`
 - [ ] H6 npz/json 存盘
 
@@ -205,7 +205,23 @@ README 增加最小正确用法（`fit_spectrum` + 预处理开关）和真谱�
 | 无 AYV | 真值 \(A_{YV}=0\)，`fit_ayv=True` | \(A_{YV}\) 落在 0 附近（≤ 一步网格），\(x,A_V\) 仍收回 |
 | 拒绝 | `fit_ayv=True` 无旗标 | `ValueError` |
 
-未开始 H4 代码。
+**H4 结果（2026-09-02）：通过。** 打开 AYV 收回 \(A_V,A_{YV},x\)；共用 \(A_V\) 更差；真值 \(A_{YV}=0\) 时估计落在 0 附近；无旗标 raise。
+
+## H5 验收（先写再做，2026-09-02）
+
+默认仍用自带 CCM / CAL / Gordon。`law="dust:<Model>"` 时才对接 `dust_extinction`（例如 `dust:F99`）。不改默认 `law="CCM"` 的数值。缺包时明确报错，不静默回退到自带曲线。
+
+合成：3 模板，真值 \(x=(0.50,0.35,0.15)\)，\(A_V=0.30\)，无运动学。真消光用 F99。走 `fit_spectrum`。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| dust F99 | `law="dust:F99"` | \(|\Delta A_V|\le 0.10\)，\(x\) atol 0.12 |
+| 对照 | 同一 F99 谱但 `law="CCM"` | χ² 更大，或 \(|\Delta A_V|>0.05\) |
+| 默认 | 自带 CCM 合成 + 默认 `law` | 仍收回；此路径不 `import dust_extinction` |
+| 缺依赖 | 请求 `dust:F99` 但包不可用 | `ImportError` 或 `ValueError`，消息含 `dust_extinction` |
+| 未知模型 | `law="dust:NOTALAW"` | `ValueError` |
+
+未开始 H5 代码。
 
 ## B2 验收（历史，2026-09-01）
 
