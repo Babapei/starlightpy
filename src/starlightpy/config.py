@@ -27,3 +27,4 @@ class FitConfig:
     fwhm_data: Optional[float] = None
     fwhm_template: Optional[float] = None
     estimate_error: bool = False
+    refine_kinematics: bool = False

@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-02（G4 完成；下一刀 G5）
+最后更新：2026-09-02（G5 完成；下一刀 G6）
 
 ---
 
@@ -105,9 +105,10 @@ M_\lambda = \left(\sum_j x_j\, b_{j,\lambda}\, r_\lambda(A_V)\right) \otimes G(v
 | `extinction.py` | \(q_\lambda=A_\lambda/A_V\)：CCM、CAL、Gordon | 有 | H：可选 `dust_extinction` |
 | `model.py` | 红化后的线性组合 | 有 | H：可选 AYV |
 | `kinematics.py` | 均匀 lnλ 上的高斯 LOSVD | 有 | G3：LSF 对齐在 preprocess；H：垫边/密采样 |
-| `fit.py` | NNLS；\(A_V\) 与 \(v,\sigma\) 网格；clip/EX0；`FitResult` | 有 | G1 扩字段；G5 局部加密（可极薄 `refine.py`） |
+| `fit.py` | NNLS；\(A_V\) 与 \(v,\sigma\) 网格；clip/EX0；`FitResult` | 有 | G1 字段已加；G5 局部加密（`refine.py`） |
 | `clip.py` | NSIGMA clip + EX0 | 有 | — |
 | `optimize.py` | 占位 | 阶段 C 已跳过 | **禁止对 \(x_j\) 做 Metropolis**；G5 不要走这条对 \(x\) 的退火 |
+| `refine.py` | \((A_V,v,\sigma)\) 局部加密 + Nelder-Mead；每点 NNLS | G5 有 | 禁止对 \(x_j\) 退火 |
 | `preprocess.py` | 静止系、空气/真空、LSF、线 mask、估误差 | 有 | 不要把 \(z\)/FWHM 当拟合参数 |
 | `products.py` | \(M/L\) 后处理；有元数据时的光加权量 | **无（G6 才建）** | 无 \(M/L\) 禁止输出 \(\mu_j\) |
 | `simulate.py` | 合成谱 | 有 | G 测试继续用 |
@@ -192,7 +193,7 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 - [x] **G2** 已知 \(z\) 静止系 + 真空/空气（`redshift=` 只应用，不搜索）
 - [x] **G3** LSF/FWHM 对齐 + 光学发射线 mask 表
 - [x] **G4** 缺误差谱时 RMS 估计 + 警告（这不是真 χ²）
-- [ ] **G5** 网格最佳附近对 \((A_V,v,\sigma)\) 局部加密或连续优化；\(x_j\) 仍 NNLS。验收：离网真值比纯粗网格更近，或 χ² 不差
+- [x] **G5** 网格最佳附近对 \((A_V,v,\sigma)\) 局部加密或连续优化；\(x_j\) 仍 NNLS。验收：离网真值比纯粗网格更近，或 χ² 不差
 - [ ] **G6** `light_to_mass`；可选光加权年龄/Z（无元数据则报错）
 - [ ] **G7** README：最小正确用法 + 真谱清单（仍不准写成第三份架构文）
 
@@ -250,10 +251,9 @@ G5：与 B3 同一类离网真值，加密后更近或 χ² 不差于粗网格�
 - `wave_frame: str`（G2；`air` / `vacuum` / `as_is`）
 - `fwhm_data`, `fwhm_template`（G3；单位 **Å** 仪器 FWHM；仅当数据更宽时展宽模板）
 - `estimate_error: bool`（G4；缺 \(e_\lambda\) 时才用）
-
-**阶段 G 预告（实现对应小段时才写进 `FitConfig`，未实现前代码里不要先加）：**
-
 - `refine_kinematics: bool`（G5）
+
+**阶段 G 预告：** 无。G 字段已全部进白名单。
 
 不要加：N_chains、Fortran 同名配置几十条、学习率、CNN 权重路径、`anneal_x`、`fit_emission`、`search_redshift`。
 
@@ -295,7 +295,7 @@ G5：与 B3 同一类离网真值，加密后更近或 χ² 不差于粗网格�
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。当前小段是 **G5**（\((A_V,v,\sigma)\) 局部加密，\(x_j\) 仍 NNLS）。未完成 G5 不要做 G6。
+见 [docs/PROGRESS.md](PROGRESS.md)。当前小段是 **G6**（`light_to_mass` 与光加权产品）。未完成 G6 不要做 G7。
 
 ---
 

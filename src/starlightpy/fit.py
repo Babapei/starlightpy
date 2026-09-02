@@ -16,6 +16,7 @@ from .extinction import get_extinction_curve
 from .kinematics import apply_losvd
 from .model import build_model, normalize_at, normalize_bases, reddening_factor
 from .preprocess import align_observation, estimate_rms_error, match_instrumental_fwhm
+from .refine import refine_av_v_sigma
 
 
 @dataclass
@@ -220,6 +221,27 @@ def fit_spectrum(
         )
         v_opt = config.v0_kms
         s_opt = config.sigma_kms
+
+    if config.refine_kinematics:
+        def _eval(av: float, vv: float, ss: float):
+            return _design_and_nnls(wave, obs_n, weights, bases_n, q, q0, av, vv, ss)
+
+        x_opt, a_v_opt, model_n, chi2, v_opt, s_opt = refine_av_v_sigma(
+            _eval,
+            a_v_opt,
+            v_opt,
+            s_opt,
+            a_v_step=config.a_v_step,
+            v_step=config.v_step,
+            sigma_step=config.sigma_step,
+            a_v_bounds=config.a_v_bounds,
+            v_bounds=config.v_bounds,
+            sigma_bounds=config.sigma_bounds,
+            vary_kinematics=config.search_kinematics,
+        )
+        _, _, _, _, chi2_av = _best_av_for_kinematics(
+            wave, obs_n, weights, bases_n, q, q0, a_v_grid, v_opt, s_opt
+        )
 
     n_clipped = 0
     if config.clip_nsigma is not None:
