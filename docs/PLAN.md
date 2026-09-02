@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-02（G6 完成；下一刀 G7）
+最后更新：2026-09-02（阶段 G / 1.x 完成）
 
 ---
 
@@ -70,7 +70,7 @@ M_\lambda = \left(\sum_j x_j\, b_{j,\lambda}\, r_\lambda(A_V)\right) \otimes G(v
 - 可选 AYV（模板要有年轻旗标 + 有/无 AYV 两套真值）
 - 可选对接 `dust_extinction`；自己的 npz/json 存盘（**不是**官方 `.out`）
 
-未完成 G 不准开 H。
+G（1.x）已完成。H 默认关，每项单独改合同再开。
 
 ### 永不做（不是「以后可选」）
 
@@ -113,7 +113,7 @@ M_\lambda = \left(\sum_j x_j\, b_{j,\lambda}\, r_\lambda(A_V)\right) \otimes G(v
 | `products.py` | \(M/L\) 后处理；有元数据时的光加权量 | 有 | 无 \(M/L\) 禁止输出 \(\mu_j\) |
 | `simulate.py` | 合成谱 | 有 | G 测试继续用 |
 
-对外保证（G 完成后会再导出 preprocess / products）：
+对外保证（preprocess / products 已导出）：
 
 ```python
 from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
@@ -185,9 +185,9 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 
 ---
 
-### 阶段 G — 可认真调用的 1.x（当前主线）
+### 阶段 G — 可认真调用的 1.x（已完成）
 
-把「进拟合器之前会算错」和「结果看不清」补上。未完成 G 不准开 H。一次一个小段。
+把「进拟合器之前会算错」和「结果看不清」补上。G 已完成。H 默认关。一次一个小段。
 
 - [x] **G1** `FitResult` + 防错：返回 `good`、`obs_scale`、`config`、`dropped`；NaN / 空 norm 窗口硬报错；`search_kinematics=False` 且 `sigma_kms=0` 时警告
 - [x] **G2** 已知 \(z\) 静止系 + 真空/空气（`redshift=` 只应用，不搜索）
@@ -195,9 +195,9 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 - [x] **G4** 缺误差谱时 RMS 估计 + 警告（这不是真 χ²）
 - [x] **G5** 网格最佳附近对 \((A_V,v,\sigma)\) 局部加密或连续优化；\(x_j\) 仍 NNLS。验收：离网真值比纯粗网格更近，或 χ² 不差
 - [x] **G6** `light_to_mass`；可选光加权年龄/Z（无元数据则报错）
-- [ ] **G7** README：最小正确用法 + 真谱清单（仍不准写成第三份架构文）
+- [x] **G7** README：最小正确用法 + 真谱清单（仍不准写成第三份架构文）
 
-**1.x 完成线 = G1–G7。** H 不是 1.x 门槛。
+**1.x 完成线 = G1–G7。** H 不是 1.x 门槛。**G 已完成。**
 
 ---
 
@@ -279,7 +279,7 @@ G5：与 B3 同一类离网真值，加密后更近或 χ² 不差于粗网格�
 
 ## 9. 写 1.x 时仍适用的提醒
 
-1. **一次只做一件。** 现在只做 PROGRESS 里的当前小段（先 G1）。不要同时改 `easyppxf`、不要开 H、不要为「更像 Fortran」加开关。
+1. **一次只做一件。** 阶段 G 已完成。不要同时改 `easyppxf`、不要开 H、不要为「更像 Fortran」加开关。
 2. **两个 `fit_spectrum` 不要混。** 主业是 `from starlightpy import fit_spectrum`；pPXF 请 `import easyppxf` 并起别的名字。
 3. **先合成谱，不要一上来拟合真星系。** 真谱有红移、真空/空气、仪器展宽、发射线；没做 G2–G3 时锅会甩给拟合器。不要往仓库塞 BC03。
 4. **观测和模板必须已经在同一套波长上**（或先走 G 的预处理再 `resample_to`）。`build_model` 不负责插值。
@@ -295,7 +295,7 @@ G5：与 B3 同一类离网真值，加密后更近或 χ² 不差于粗网格�
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。当前小段是 **G7**（README 最小正确用法 + 真谱清单）。未完成 G7 阶段 G 不算完。
+见 [docs/PROGRESS.md](PROGRESS.md)。**阶段 G（1.x）已完成。** 不要自动开始 H；H 默认关。
 
 ---
 
@@ -309,7 +309,7 @@ G5：与 B3 同一类离网真值，加密后更近或 χ² 不差于粗网格�
 
 1. 对应测试绿（合成谱走公开 API + `assert`）。
 2. 本文该清单打勾，改「最后更新」。
-3. README 只改「当前做到哪」一句；**用法清单等到 G7** 再写进 README。
+3. README 只改「当前做到哪」一句；用法清单已在 G7 写入 README。
 4. 不新增 `*_v2.py`、不把 pPXF 接进 `starlightpy`。
 
 **代码：**
