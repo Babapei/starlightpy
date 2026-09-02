@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass, replace
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -16,6 +16,7 @@ from .extinction import get_extinction_curve
 from .kinematics import apply_losvd
 from .model import build_model, normalize_at, normalize_bases, reddening_factor
 from .preprocess import align_observation, estimate_rms_error, match_instrumental_fwhm
+from .errors import halfwidth_chi2_plus_one, scan_slice, x_fraction_std
 from .refine import refine_av_v_sigma
 from .regularize import XRegularizer
 
@@ -38,6 +39,7 @@ class FitResult:
     obs_scale: float = 1.0
     config: Optional[FitConfig] = None
     dropped: Optional[NDArray[np.bool_]] = None
+    errors: Optional[dict] = None
 
 
 def _weights(error: NDArray[np.float64], good: NDArray[np.bool_]) -> NDArray[np.float64]:
@@ -111,6 +113,56 @@ def _best_av_for_kinematics(
     return x_grid[best], float(a_v_grid[best]), models[best], float(chi2_grid[best]), chi2_grid
 
 
+def _errors_chi2_slice(
+    config: FitConfig,
+    wave: NDArray[np.float64],
+    obs_n: NDArray[np.float64],
+    weights: NDArray[np.float64],
+    bases_n: NDArray[np.float64],
+    q: NDArray[np.float64],
+    q0: float,
+    a_v_opt: float,
+    v_opt: float,
+    s_opt: float,
+    chi2: float,
+    x_reg: Optional[XRegularizer],
+) -> dict:
+    def chi2_at_av(av: float) -> float:
+        _, _, c = _design_and_nnls(
+            wave, obs_n, weights, bases_n, q, q0, av, v_opt, s_opt, x_reg=x_reg
+        )
+        return c
+
+    lo = max(config.a_v_bounds[0], a_v_opt - 2.0 * config.a_v_step)
+    hi = min(config.a_v_bounds[1], a_v_opt + 2.0 * config.a_v_step)
+    grid, chi2s = scan_slice(lo, hi, 21, chi2_at_av)
+    out: Dict[str, float] = {
+        "a_v": halfwidth_chi2_plus_one(grid, chi2s, chi2, config.a_v_step),
+    }
+    if config.search_kinematics:
+        def chi2_at_v(vv: float) -> float:
+            _, _, c = _design_and_nnls(
+                wave, obs_n, weights, bases_n, q, q0, a_v_opt, vv, s_opt, x_reg=x_reg
+            )
+            return c
+
+        def chi2_at_s(ss: float) -> float:
+            _, _, c = _design_and_nnls(
+                wave, obs_n, weights, bases_n, q, q0, a_v_opt, v_opt, ss, x_reg=x_reg
+            )
+            return c
+
+        vlo = max(config.v_bounds[0], v_opt - 2.0 * config.v_step)
+        vhi = min(config.v_bounds[1], v_opt + 2.0 * config.v_step)
+        vg, vc = scan_slice(vlo, vhi, 15, chi2_at_v)
+        out["v0_kms"] = halfwidth_chi2_plus_one(vg, vc, chi2, config.v_step)
+        slo = max(config.sigma_bounds[0], s_opt - 2.0 * config.sigma_step)
+        shi = min(config.sigma_bounds[1], s_opt + 2.0 * config.sigma_step)
+        sg, sc = scan_slice(slo, shi, 15, chi2_at_s)
+        out["sigma_kms"] = halfwidth_chi2_plus_one(sg, sc, chi2, config.sigma_step)
+    return out
+
+
 def fit_spectrum(
     wavelengths: ArrayLike,
     flux: ArrayLike,
@@ -154,6 +206,14 @@ def fit_spectrum(
         config.regularize_strength,
         config.age_bin_edges,
     )
+    if config.error_method is not None:
+        method = config.error_method.lower()
+        if method not in ("chi2_slice", "repeat"):
+            raise ValueError("error_method must be None, 'chi2_slice', or 'repeat'.")
+        if method == "repeat" and config.n_repeat < 2:
+            raise ValueError("n_repeat must be >= 2.")
+    else:
+        method = None
 
     if config.redshift < 0:
         raise ValueError("redshift must be >= 0.")
@@ -310,6 +370,52 @@ def fit_spectrum(
     dof = max(n_good - n_used - 1, 1)
     x_sum = float(np.sum(x_opt))
     x_frac = x_opt / x_sum if x_sum > 0 else x_opt
+
+    extra_errors = None
+    if method == "chi2_slice":
+        extra_errors = _errors_chi2_slice(
+            config,
+            wave,
+            obs_n,
+            weights,
+            bases_n,
+            q,
+            q0,
+            a_v_opt,
+            v_opt,
+            s_opt,
+            chi2,
+            x_reg,
+        )
+    elif method == "repeat":
+        inner = replace(
+            config,
+            error_method=None,
+            redshift=0.0,
+            wave_frame="as_is",
+            fwhm_data=None,
+            fwhm_template=None,
+            clip_nsigma=None,
+        )
+        rng = np.random.default_rng(config.repeat_seed)
+        model_obs = model_n * obs_scale
+        samples = []
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            for _ in range(config.n_repeat):
+                noisy = model_obs + rng.normal(0.0, err)
+                rep = fit_spectrum(
+                    wave,
+                    noisy,
+                    err,
+                    bases,
+                    mask=good,
+                    config=inner,
+                    template_ages=template_ages,
+                )
+                samples.append(rep.x_fraction)
+        extra_errors = {"x": x_fraction_std(np.vstack(samples))}
+
     return FitResult(
         x=x_opt,
         x_fraction=x_frac,
@@ -327,4 +433,5 @@ def fit_spectrum(
         obs_scale=float(obs_scale),
         config=config,
         dropped=dropped,
+        errors=extra_errors,
     )

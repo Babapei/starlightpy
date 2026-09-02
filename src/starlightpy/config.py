@@ -31,3 +31,6 @@ class FitConfig:
     regularize_x: Optional[str] = None
     regularize_strength: float = 1.0
     age_bin_edges: Optional[Tuple[float, ...]] = None
+    error_method: Optional[str] = None
+    n_repeat: int = 8
+    repeat_seed: int = 0
