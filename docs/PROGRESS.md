@@ -7,7 +7,7 @@
 | 项 | 值 |
 | --- | --- |
 | 阶段 | H（研究可用） |
-| 小段 | **H5 已完成**；下一刀 **H6** |
+| 小段 | **H6 已完成**；阶段 H（H1–H6）全部完成 |
 | 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、再长 `easyppxf`、未写验收就开下一 H 项 |
 
 ## 小段清单
@@ -40,7 +40,7 @@
 - [x] H3 LOSVD 垫边与设计矩阵预计算
 - [x] H4 可选 AYV
 - [x] H5 可选 `dust_extinction`
-- [ ] H6 npz/json 存盘
+- [x] H6 npz/json 存盘
 
 ## G1 验收（先写再做，2026-09-02）
 
@@ -236,7 +236,7 @@ README 增加最小正确用法（`fit_spectrum` + 预处理开关）和真谱�
 | 默认 | 只 `fit_spectrum` | 不产生 `.out` 文件 |
 | 拒绝 | 后缀既不是 npz 也不是 json | `ValueError` |
 
-未开始 H6 代码。
+**H6 结果（2026-09-02）：通过。** npz 与 json 读回 \(x,A_V,v,\sigma,\chi^2\) 与 model/good；`fit_spectrum` 不写 `.out`；其它后缀 raise。
 
 ## B2 验收（历史，2026-09-01）
 
