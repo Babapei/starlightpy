@@ -7,7 +7,7 @@
 | 项 | 值 |
 | --- | --- |
 | 阶段 | H（研究可用） |
-| 小段 | **H4 已完成**；下一刀 **H5** |
+| 小段 | **H5 已完成**；下一刀 **H6** |
 | 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、再长 `easyppxf`、未写验收就开下一 H 项 |
 
 ## 小段清单
@@ -39,7 +39,7 @@
 - [x] H2 χ² 切片 / 粗误差
 - [x] H3 LOSVD 垫边与设计矩阵预计算
 - [x] H4 可选 AYV
-- [ ] H5 可选 `dust_extinction`
+- [x] H5 可选 `dust_extinction`
 - [ ] H6 npz/json 存盘
 
 ## G1 验收（先写再做，2026-09-02）
@@ -221,7 +221,22 @@ README 增加最小正确用法（`fit_spectrum` + 预处理开关）和真谱�
 | 缺依赖 | 请求 `dust:F99` 但包不可用 | `ImportError` 或 `ValueError`，消息含 `dust_extinction` |
 | 未知模型 | `law="dust:NOTALAW"` | `ValueError` |
 
-未开始 H5 代码。
+**H5 结果（2026-09-02）：通过。** `dust:F99` 收回；错用自带 CCM 更差；默认 CCM 不变；缺包与未知模型明确报错。
+
+## H6 验收（先写再做，2026-09-02）
+
+自己的 npz / json 存盘，**不是** Fortran `.out`。默认 `fit_spectrum` 不写盘。保存并读回 `FitResult` 的关键字段：\(x\)、\(x\) 分数、\(A_V\)、\(A_{YV}\)、\(v,\sigma\)、χ²、model、good。config 有则一并保存。走公开 API。
+
+合成：3 模板无噪声收回路径，真值 \(x=(0.50,0.35,0.15)\)，\(A_V=0.30\)。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| npz | `save_fit_result(path.npz)` 再 `load_fit_result` | \(x,A_V,v,\sigma,\chi^2\) 与内存一致；model/good 形状一致 |
+| json | 同上，后缀 `.json` | 同上 |
+| 默认 | 只 `fit_spectrum` | 不产生 `.out` 文件 |
+| 拒绝 | 后缀既不是 npz 也不是 json | `ValueError` |
+
+未开始 H6 代码。
 
 ## B2 验收（历史，2026-09-01）
 
