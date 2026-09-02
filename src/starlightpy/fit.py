@@ -15,7 +15,7 @@ from .config import FitConfig
 from .extinction import get_extinction_curve
 from .kinematics import apply_losvd
 from .model import build_model, normalize_at, normalize_bases, reddening_factor
-from .preprocess import align_observation
+from .preprocess import align_observation, match_instrumental_fwhm
 
 
 @dataclass
@@ -139,6 +139,20 @@ def fit_spectrum(
         obs, err = align_observation(
             wave, obs, err, redshift=config.redshift, wave_frame=config.wave_frame
         )
+
+    if (config.fwhm_data is None) != (config.fwhm_template is None):
+        raise ValueError("fwhm_data and fwhm_template must both be set or both omitted.")
+    if config.fwhm_data is not None:
+        if config.fwhm_data < 0.0 or config.fwhm_template < 0.0:
+            raise ValueError("fwhm_data and fwhm_template must be >= 0.")
+        if config.fwhm_data > config.fwhm_template:
+            bases = match_instrumental_fwhm(wave, bases, config.fwhm_data, config.fwhm_template)
+        elif config.fwhm_data < config.fwhm_template:
+            warnings.warn(
+                "fwhm_data < fwhm_template; cannot deconvolve. Skipping LSF match.",
+                UserWarning,
+                stacklevel=2,
+            )
 
     good = np.ones(n_wave, dtype=bool) if mask is None else np.asarray(mask, dtype=bool)
     if good.shape != (n_wave,):

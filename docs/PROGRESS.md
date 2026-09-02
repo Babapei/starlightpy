@@ -7,7 +7,7 @@
 | 项 | 值 |
 | --- | --- |
 | 阶段 | G（可认真调用的 1.x） |
-| 小段 | **G2 已完成**；下一刀 **G3** |
+| 小段 | **G3 已完成**；下一刀 **G4** |
 | 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、未完成 G 就开 H、再长 `easyppxf` |
 
 ## 小段清单
@@ -27,7 +27,7 @@
 
 - [x] **G1** `FitResult` + 防错
 - [x] G2 已知 \(z\) + 真空/空气
-- [ ] G3 LSF + 发射线 mask 表
+- [x] G3 LSF + 发射线 mask 表
 - [ ] G4 缺误差时 RMS 估计
 - [ ] G5 非线性局部加密
 - [ ] G6 `light_to_mass` / 光加权产品
@@ -79,6 +79,20 @@
 | 线表 | `optical_emission_mask_regions` + `apply_mask` | Hα 6563 附近为 False |
 
 未开始 G3 代码。
+
+**G3 结果（2026-09-02）：通过。** 4Å vs 2Å 对齐收回 \(x,A_V\)；不对齐 χ² 更大；Hα 6563 被 mask。
+
+## G4 验收（先写再做，2026-09-02）
+
+`error=None` 且 `estimate_error=True` 时，用观测在 `good` 像素上的 RMS（相对连续谱或相对流量中位数）构造常数误差，并发出警告：这不是真 χ²。`estimate_error=False`（默认）且未给误差则 `ValueError`。有真实误差时不要覆盖。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| 估计 | 无噪声合成后丢掉误差数组，`estimate_error=True` | 收回 \(|\Delta A_V|\le 0.10\)，\(x\) atol 0.12；`UserWarning` 含「not a true」或「不是真」χ² |
+| 拒绝 | 同一调用 `estimate_error=False` 且 `error=None` | `ValueError` |
+| 真误差 | 给出误差数组 | 不因 `estimate_error` 改写该数组 |
+
+未开始 G4 代码。
 
 ## B2 验收（历史，2026-09-01）
 
@@ -137,3 +151,4 @@
 | 2026-09-02 | 合同 | PLAN 改为全面好的 1.x；断点 G1 |
 | 2026-09-02 | G1 | FitResult 字段、NaN/空窗口、σ=0 警告 |
 | 2026-09-02 | G2 | 已知 z 静止系、空气/真空 |
+| 2026-09-02 | G3 | LSF/FWHM 对齐 + 光学发射线 mask |

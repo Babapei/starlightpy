@@ -24,3 +24,5 @@ class FitConfig:
     x_min_keep: float = 0.0
     redshift: float = 0.0
     wave_frame: str = "as_is"
+    fwhm_data: Optional[float] = None
+    fwhm_template: Optional[float] = None

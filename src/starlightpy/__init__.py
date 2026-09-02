@@ -19,7 +19,14 @@ from .io import (
 )
 from .kinematics import apply_losvd
 from .model import build_model, normalize_at
-from .preprocess import air_to_vacuum, align_observation, to_rest_frame, vacuum_to_air
+from .preprocess import (
+    air_to_vacuum,
+    align_observation,
+    match_instrumental_fwhm,
+    optical_emission_mask_regions,
+    to_rest_frame,
+    vacuum_to_air,
+)
 from .simulate import default_absorption_bases, mock_observation
 
 __all__ = [
@@ -46,6 +53,8 @@ __all__ = [
     "mock_observation",
     "air_to_vacuum",
     "align_observation",
+    "match_instrumental_fwhm",
+    "optical_emission_mask_regions",
     "to_rest_frame",
     "vacuum_to_air",
     "normalize_at",
