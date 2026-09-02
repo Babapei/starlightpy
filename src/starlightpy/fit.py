@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import warnings
+from dataclasses import dataclass, replace
 from typing import Optional, Tuple
 
 import numpy as np
@@ -30,6 +31,10 @@ class FitResult:
     a_v_grid: NDArray[np.float64]
     chi2_grid: NDArray[np.float64]
     n_clipped: int = 0
+    good: Optional[NDArray[np.bool_]] = None
+    obs_scale: float = 1.0
+    config: Optional[FitConfig] = None
+    dropped: Optional[NDArray[np.bool_]] = None
 
 
 def _weights(error: NDArray[np.float64], good: NDArray[np.bool_]) -> NDArray[np.float64]:
@@ -107,6 +112,7 @@ def fit_spectrum(
     """Fit x_j and A_V; optionally grid-search v and sigma; clip/EX0 if configured."""
     if config is None:
         config = FitConfig()
+    config = replace(config)
 
     wave = np.asarray(wavelengths, dtype=float)
     obs = np.asarray(flux, dtype=float)
@@ -117,11 +123,26 @@ def fit_spectrum(
         raise ValueError("Observation, error and base wavelength axes must match.")
     if np.any(np.diff(wave) <= 0):
         raise ValueError("wavelengths must be strictly increasing.")
+    if not np.all(np.isfinite(wave)):
+        raise ValueError("wavelengths must be finite.")
+    if not np.all(np.isfinite(obs)):
+        raise ValueError("flux contains non-finite values.")
+    if not np.all(np.isfinite(bases)):
+        raise ValueError("base_matrix contains non-finite values.")
 
     good = np.ones(n_wave, dtype=bool) if mask is None else np.asarray(mask, dtype=bool)
+    if good.shape != (n_wave,):
+        raise ValueError("mask must match the wavelength axis.")
     obs_n, obs_scale = normalize_at(wave, obs, config.norm_window)
     bases_n = normalize_bases(wave, bases, config.norm_window)
     err_n = err / obs_scale
+
+    if not config.search_kinematics and config.sigma_kms == 0.0:
+        warnings.warn(
+            "search_kinematics is False and sigma_kms is 0; velocity dispersion is not fitted.",
+            UserWarning,
+            stacklevel=2,
+        )
 
     q = get_extinction_curve(wave, law=config.law, r_v=config.r_v)
     win = (wave >= config.norm_window[0]) & (wave <= config.norm_window[1])
@@ -178,6 +199,7 @@ def fit_spectrum(
             )
 
     n_used = n_comp
+    dropped = np.zeros(n_comp, dtype=bool)
     if config.x_min_keep > 0:
         x_sum = float(np.sum(x_opt))
         x_frac_now = x_opt / x_sum if x_sum > 0 else x_opt
@@ -197,6 +219,7 @@ def fit_spectrum(
             x_full = np.zeros(n_comp, dtype=float)
             x_full[keep] = x_sub
             x_opt = x_full
+            dropped = ~keep
             n_used = int(np.sum(keep))
 
     n_good = int(np.sum(weights > 0))
@@ -216,4 +239,8 @@ def fit_spectrum(
         a_v_grid=a_v_grid,
         chi2_grid=chi2_av,
         n_clipped=n_clipped,
+        good=good.copy(),
+        obs_scale=float(obs_scale),
+        config=config,
+        dropped=dropped,
     )

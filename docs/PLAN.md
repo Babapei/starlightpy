@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-02（v0.1 基线已完成；目标改为全面好的 1.x；下一刀 G1）
+最后更新：2026-09-02（G1 完成；下一刀 G2）
 
 ---
 
@@ -188,7 +188,7 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 
 把「进拟合器之前会算错」和「结果看不清」补上。未完成 G 不准开 H。一次一个小段。
 
-- [ ] **G1** `FitResult` + 防错：返回 `good`、`obs_scale`、`config`、`dropped`；NaN / 空 norm 窗口硬报错；`search_kinematics=False` 且 `sigma_kms=0` 时警告
+- [x] **G1** `FitResult` + 防错：返回 `good`、`obs_scale`、`config`、`dropped`；NaN / 空 norm 窗口硬报错；`search_kinematics=False` 且 `sigma_kms=0` 时警告
 - [ ] **G2** 已知 \(z\) 静止系 + 真空/空气（`redshift=` 只应用，不搜索）
 - [ ] **G3** LSF/FWHM 对齐 + 光学发射线 mask 表
 - [ ] **G4** 缺误差谱时 RMS 估计 + 警告（这不是真 χ²）
@@ -295,7 +295,7 @@ G5：与 B3 同一类离网真值，加密后更近或 χ² 不差于粗网格�
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。v0.1 已完成。当前小段是 **G1**（`FitResult` + 防错）。未完成 G1 不要做 G2。
+见 [docs/PROGRESS.md](PROGRESS.md)。v0.1 已完成。当前小段是 **G2**（已知 \(z\) 静止系 + 真空/空气）。未完成 G2 不要做 G3。
 
 ---
 

@@ -25,7 +25,7 @@ print(pp.velocity, pp.sigma)
 
 `easyppxf.load_sdss_fits` 只读一维谱；拟合请引用 Cappellari，不要把本包装成一种新方法。SDSS FITS 需要 `pip install astropy`（或 `.[fits]` / `.[dev]`）。
 
-当前做到 **v0.1 基线**（A–E：拟合器 + 读文件）。目标改为 PLAN 的 **1.x（阶段 G）**；断点 **G1**。见 [docs/PROGRESS.md](docs/PROGRESS.md)。
+当前做到 **G1**。目标 PLAN **1.x 阶段 G**；断点 **G2**。见 [docs/PROGRESS.md](docs/PROGRESS.md)。
 
 算法出处：Cid Fernandes et al. 2005（STARLIGHT）。`easyppxf` 用 pPXF 时请引用 Cappellari。本库是 MIT 许可的软件，不是那两篇论文的官方实现。
 
