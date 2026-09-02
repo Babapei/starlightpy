@@ -15,7 +15,7 @@ from .config import FitConfig
 from .extinction import get_extinction_curve
 from .kinematics import apply_losvd
 from .model import build_model, normalize_at, normalize_bases, reddening_factor
-from .preprocess import align_observation, match_instrumental_fwhm
+from .preprocess import align_observation, estimate_rms_error, match_instrumental_fwhm
 
 
 @dataclass
@@ -105,7 +105,7 @@ def _best_av_for_kinematics(
 def fit_spectrum(
     wavelengths: ArrayLike,
     flux: ArrayLike,
-    error: ArrayLike,
+    error: Optional[ArrayLike],
     base_matrix: ArrayLike,
     mask: Optional[ArrayLike] = None,
     config: Optional[FitConfig] = None,
@@ -117,11 +117,17 @@ def fit_spectrum(
 
     wave = np.asarray(wavelengths, dtype=float)
     obs = np.asarray(flux, dtype=float)
-    err = np.asarray(error, dtype=float)
     bases = np.asarray(base_matrix, dtype=float)
     n_wave, n_comp = bases.shape
-    if obs.shape != (n_wave,) or err.shape != (n_wave,):
-        raise ValueError("Observation, error and base wavelength axes must match.")
+    if obs.shape != (n_wave,):
+        raise ValueError("Observation and base wavelength axes must match.")
+    err_in: Optional[NDArray[np.float64]]
+    if error is None:
+        err_in = None
+    else:
+        err_in = np.asarray(error, dtype=float)
+        if err_in.shape != (n_wave,):
+            raise ValueError("Observation, error and base wavelength axes must match.")
     if np.any(np.diff(wave) <= 0):
         raise ValueError("wavelengths must be strictly increasing.")
     if not np.all(np.isfinite(wave)):
@@ -136,8 +142,8 @@ def fit_spectrum(
     if config.wave_frame.lower() not in ("as_is", "air", "vacuum"):
         raise ValueError("wave_frame must be 'as_is', 'air', or 'vacuum'.")
     if config.redshift != 0.0 or config.wave_frame.lower() == "air":
-        obs, err = align_observation(
-            wave, obs, err, redshift=config.redshift, wave_frame=config.wave_frame
+        obs, err_in = align_observation(
+            wave, obs, err_in, redshift=config.redshift, wave_frame=config.wave_frame
         )
 
     if (config.fwhm_data is None) != (config.fwhm_template is None):
@@ -157,6 +163,18 @@ def fit_spectrum(
     good = np.ones(n_wave, dtype=bool) if mask is None else np.asarray(mask, dtype=bool)
     if good.shape != (n_wave,):
         raise ValueError("mask must match the wavelength axis.")
+
+    if err_in is None:
+        if not config.estimate_error:
+            raise ValueError("error is required unless estimate_error is True.")
+        warnings.warn(
+            "Estimated a constant RMS error; this is not a true χ².",
+            UserWarning,
+            stacklevel=2,
+        )
+        err = estimate_rms_error(obs, good)
+    else:
+        err = err_in
     obs_n, obs_scale = normalize_at(wave, obs, config.norm_window)
     bases_n = normalize_bases(wave, bases, config.norm_window)
     err_n = err / obs_scale

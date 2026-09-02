@@ -22,6 +22,7 @@ from .model import build_model, normalize_at
 from .preprocess import (
     air_to_vacuum,
     align_observation,
+    estimate_rms_error,
     match_instrumental_fwhm,
     optical_emission_mask_regions,
     to_rest_frame,
@@ -53,6 +54,7 @@ __all__ = [
     "mock_observation",
     "air_to_vacuum",
     "align_observation",
+    "estimate_rms_error",
     "match_instrumental_fwhm",
     "optical_emission_mask_regions",
     "to_rest_frame",

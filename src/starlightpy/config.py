@@ -26,3 +26,4 @@ class FitConfig:
     wave_frame: str = "as_is"
     fwhm_data: Optional[float] = None
     fwhm_template: Optional[float] = None
+    estimate_error: bool = False

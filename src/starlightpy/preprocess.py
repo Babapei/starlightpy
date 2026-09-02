@@ -73,10 +73,10 @@ def air_to_vacuum(wavelength: ArrayLike) -> NDArray[np.float64]:
 def align_observation(
     template_wave: ArrayLike,
     flux: ArrayLike,
-    error: ArrayLike,
+    error: Optional[ArrayLike] = None,
     redshift: float = 0.0,
     wave_frame: str = "as_is",
-) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
+) -> Tuple[NDArray[np.float64], Optional[NDArray[np.float64]]]:
     """Put observed F_λ onto the rest-frame vacuum template grid."""
     frame = wave_frame.lower()
     if frame not in ("as_is", "air", "vacuum"):
@@ -84,7 +84,13 @@ def align_observation(
     target = np.asarray(template_wave, dtype=float)
     wave_data = air_to_vacuum(target) if frame == "air" else target.copy()
     if redshift == 0.0 and frame != "air":
-        return np.asarray(flux, dtype=float), np.asarray(error, dtype=float)
+        flux_out = np.asarray(flux, dtype=float)
+        if error is None:
+            return flux_out, None
+        return flux_out, np.asarray(error, dtype=float)
+    if error is None:
+        wave_rest, flux_rest = to_rest_frame(wave_data, flux, redshift)
+        return resample_to(wave_rest, flux_rest, target), None
     wave_rest, flux_rest, err_rest = to_rest_frame(wave_data, flux, redshift, error)
     return resample_to(wave_rest, flux_rest, target), resample_to(wave_rest, err_rest, target)
 
@@ -158,3 +164,23 @@ def match_instrumental_fwhm(
 def optical_emission_mask_regions() -> List[Tuple[float, float, float]]:
     """STARLIGHT-style optical emission windows for ``apply_mask``."""
     return list(_OPTICAL_EMISSION_MASK_REGIONS)
+
+
+def estimate_rms_error(
+    flux: ArrayLike,
+    good: Optional[ArrayLike] = None,
+) -> NDArray[np.float64]:
+    """Constant RMS of unmasked flux. This is not a true per-pixel error spectrum."""
+    y = np.asarray(flux, dtype=float)
+    used = np.isfinite(y)
+    if good is not None:
+        used &= np.asarray(good, dtype=bool)
+    if int(np.sum(used)) < 2:
+        raise ValueError("Need at least two unmasked finite pixels to estimate RMS error.")
+    rms = float(np.std(y[used], ddof=1))
+    if not np.isfinite(rms) or rms <= 0.0:
+        med = float(np.median(np.abs(y[used])))
+        rms = 0.01 * med if med > 0.0 else 0.0
+    if rms <= 0.0:
+        raise ValueError("Cannot estimate a positive RMS error from the flux.")
+    return np.full(y.shape, rms, dtype=float)
