@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "starlightpy"
 version = "1.0.0"
-description = "STARLIGHT-style spectral fitting plus a thin pPXF wrapper"
+description = "Python library for STARLIGHT-style galaxy continuum fitting"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
@@ -20,7 +20,7 @@ dust = ["dust_extinction"]
 dev = ["pytest>=7", "ppxf>=9.0", "astropy>=5.0", "dust_extinction"]
 
 [project.urls]
-Homepage = "https://github.com/Babapei/starlight"
+Homepage = "https://github.com/Babapei/starlightpy"
 
 [tool.setuptools.packages.find]
 where = ["src"]
