@@ -15,5 +15,8 @@ def test_i5_readme_lists_optional_flags_and_save():
     )
     missing = [token for token in required if token not in text]
     assert missing == []
-    assert "阶段 I" in text
     assert "1.0.0" in text
+    develop = (Path(__file__).resolve().parents[2] / "docs" / "DEVELOP.md").read_text(
+        encoding="utf-8"
+    )
+    assert "阶段 I" in develop
