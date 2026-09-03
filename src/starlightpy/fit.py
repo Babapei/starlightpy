@@ -43,6 +43,7 @@ class FitResult:
     a_yv: float = 0.0
     wavelength: Optional[NDArray[np.float64]] = None
     error: Optional[NDArray[np.float64]] = None
+    flux: Optional[NDArray[np.float64]] = None
 
 
 def _weights(error: NDArray[np.float64], good: NDArray[np.bool_]) -> NDArray[np.float64]:
@@ -607,4 +608,5 @@ def fit_spectrum(
         a_yv=float(a_yv_opt),
         wavelength=np.asarray(wave, dtype=float).copy(),
         error=np.asarray(err, dtype=float).copy(),
+        flux=np.asarray(obs, dtype=float).copy(),
     )

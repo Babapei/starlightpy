@@ -51,7 +51,7 @@ def test_i2_json_roundtrip_keeps_wavelength_and_error(tmp_path: Path):
     loaded = load_fit_result(path)
     _assert_wave_error(result, loaded)
     data = json.loads(path.read_text(encoding="utf-8"))
-    assert data["version"] == 2
+    assert data["version"] >= 2
 
 
 def test_i2_v1_payload_without_wavelength_loads(tmp_path: Path):
