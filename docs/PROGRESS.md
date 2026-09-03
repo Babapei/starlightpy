@@ -7,7 +7,7 @@
 | 项 | 值 |
 | --- | --- |
 | 阶段 | I（1.0 工作流） |
-| 小段 | **I2 已完成**；下一刀 **I3** |
+| 小段 | **I3 已完成**；下一刀 **I4** |
 | 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、再长 `easyppxf`、改 `pad_losvd` 默认、未写验收就开下一 I 项 |
 
 ## 小段清单
@@ -46,7 +46,7 @@
 
 - [x] **I1** `FitResult.wavelength` 与拟合误差
 - [x] I2 存盘读回新字段
-- [ ] I3 合成谱端到端
+- [x] I3 合成谱端到端
 - [ ] I4 CI 与 `1.0.0`
 - [ ] I5 README 可选开关与存盘
 
@@ -282,7 +282,7 @@ README 增加最小正确用法（`fit_spectrum` + 预处理开关）和真谱�
 | 端到端 | 写 `.cxt` → `load_spectrum` → `apply_mask` + 线表 → `fit_spectrum` → `light_to_mass` / `light_weighted_age`（自带假 \(M/L\)、年龄）→ `save_fit_result` → `load_fit_result` | \(|\Delta A_V|\le 0.10\)，\(x\) atol 0.12；读回 `wavelength` 与 `model` 同长；无 `.out` |
 | 拒绝 | `light_to_mass` 无 \(M/L\) | `ValueError` |
 
-未开始 I3 代码。
+**I3 结果（2026-09-03）：通过。** `.cxt` 读入 + 线 mask + fit 收回；假 \(M/L\) 产品有限；存盘读回波长与 model 同长；无 `.out`。
 
 ## I4 验收（先写再做，2026-09-03）
 
