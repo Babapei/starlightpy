@@ -310,7 +310,7 @@ def load_sdss_fits(
 
 
 _RESULT_FORMAT = "starlightpy-fitresult"
-_RESULT_VERSION = 1
+_RESULT_VERSION = 2
 _CONFIG_TUPLE_FIELDS = {
     "norm_window",
     "a_v_bounds",
@@ -394,6 +394,10 @@ def _result_to_payload(result: Any) -> dict:
         else np.asarray(result.dropped, dtype=bool).tolist(),
         "errors": _jsonable(result.errors),
         "config": _config_to_json(result.config),
+        "wavelength": None
+        if result.wavelength is None
+        else np.asarray(result.wavelength, dtype=float).tolist(),
+        "error": None if result.error is None else np.asarray(result.error, dtype=float).tolist(),
     }
 
 
@@ -404,6 +408,8 @@ def _payload_to_result(data: dict):
         raise ValueError("Not a starlightpy FitResult file.")
     good = data.get("good")
     dropped = data.get("dropped")
+    wave = data.get("wavelength")
+    err = data.get("error")
     return FitResult(
         x=np.asarray(data["x"], dtype=float),
         x_fraction=np.asarray(data["x_fraction"], dtype=float),
@@ -423,6 +429,8 @@ def _payload_to_result(data: dict):
         dropped=None if dropped is None else np.asarray(dropped, dtype=bool),
         errors=_errors_from_json(data.get("errors")),
         a_yv=float(data.get("a_yv", 0.0)),
+        wavelength=None if wave is None else np.asarray(wave, dtype=float),
+        error=None if err is None else np.asarray(err, dtype=float),
     )
 
 
