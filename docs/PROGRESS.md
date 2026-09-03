@@ -6,9 +6,9 @@
 
 | 项 | 值 |
 | --- | --- |
-| 阶段 | H（研究可用） |
-| 小段 | **H6 已完成**；阶段 H（H1–H6）全部完成 |
-| 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、再长 `easyppxf`、未写验收就开下一 H 项 |
+| 阶段 | I（1.0 工作流） |
+| 小段 | **I0 验收已写**；下一刀 **I1** |
+| 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、再长 `easyppxf`、改 `pad_losvd` 默认、未写验收就开下一 I 项 |
 
 ## 小段清单
 
@@ -41,6 +41,14 @@
 - [x] H4 可选 AYV
 - [x] H5 可选 `dust_extinction`
 - [x] H6 npz/json 存盘
+
+### 阶段 I（1.0 工作流）
+
+- [ ] **I1** `FitResult.wavelength` 与拟合误差
+- [ ] I2 存盘读回新字段
+- [ ] I3 合成谱端到端
+- [ ] I4 CI 与 `1.0.0`
+- [ ] I5 README 可选开关与存盘
 
 ## G1 验收（先写再做，2026-09-02）
 
@@ -237,6 +245,63 @@ README 增加最小正确用法（`fit_spectrum` + 预处理开关）和真谱�
 | 拒绝 | 后缀既不是 npz 也不是 json | `ValueError` |
 
 **H6 结果（2026-09-02）：通过。** npz 与 json 读回 \(x,A_V,v,\sigma,\chi^2\) 与 model/good；`fit_spectrum` 不写 `.out`；其它后缀 raise。
+
+## I1 验收（先写再做，2026-09-03）
+
+`FitResult` 增加 `wavelength`（拟合用的网格）和 `error`（进入 χ² 的误差）。`error` 与返回的 `model` 同长度、同流量单位，不是除过 `obs_scale` 的内部数组。字段只增不删。走 `fit_spectrum`。不新增 `FitConfig` 字段。
+
+合成：3 模板，真值 \(x=(0.50,0.35,0.15)\)，\(A_V=0.30\)，无运动学。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| 字段 | 无噪声收回 | `wavelength` 与输入 `wave` allclose；`error` 与 `model`、`good` 同长 |
+| 单位 | 给出误差数组 | `error` 与传入误差 allclose（不是 `err/obs_scale`） |
+| 估计 | `estimate_error=True` 且 `error=None` | `error` 有限、为正、同长；仍收回 \(A_V,x\) |
+| 回归 | G1 字段 | `good` / `obs_scale` / `config` / `dropped` 仍在 |
+
+未开始 I1 代码。
+
+## I2 验收（先写再做，2026-09-03）
+
+存盘写入 I1 新字段。payload `version` 为 2。仍能读 H6 的 v1（缺字段则为 `None`）。不是 Fortran `.out`。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| npz / json | I1 路径的结果存了再读 | `wavelength`、`error`、`model` 形状一致且数值 allclose |
+| 旧文件 | 无 `wavelength` 的 v1 payload | `load_fit_result` 不崩；`wavelength` 与 `error` 为 `None` |
+| 拒绝 | 后缀 `.out` | `ValueError` |
+
+未开始 I2 代码。
+
+## I3 验收（先写再做，2026-09-03）
+
+合成谱走公开工作流，不用真巡天谱。可把合成写成临时 `.cxt` 再 `load_spectrum`。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| 端到端 | 写 `.cxt` → `load_spectrum` → `apply_mask` + 线表 → `fit_spectrum` → `light_to_mass` / `light_weighted_age`（自带假 \(M/L\)、年龄）→ `save_fit_result` → `load_fit_result` | \(|\Delta A_V|\le 0.10\)，\(x\) atol 0.12；读回 `wavelength` 与 `model` 同长；无 `.out` |
+| 拒绝 | `light_to_mass` 无 \(M/L\) | `ValueError` |
+
+未开始 I3 代码。
+
+## I4 验收（先写再做，2026-09-03）
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| 版本 | `pyproject.toml` 与 `__version__` | 均为 `1.0.0` |
+| CI | `.github/workflows/tests.yml` | `pip install -e ".[dev]"` 后 `pytest` |
+
+未开始 I4 代码。
+
+## I5 验收（先写再做，2026-09-03）
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| 可选 | README 一小段「可选（默认关）」 | 出现 `regularize_x`、`error_method`、`pad_losvd`、`fit_ayv`、`dust:F99`、`save_fit_result`；提到 `.[dust]` / `.[fits]` |
+| 当前做到 | 一句 | 阶段 I / 1.0.0 |
+| 禁止 | — | 不新增长文、不把真星系当用法真理 |
+
+未开始 I5 代码。
 
 ## B2 验收（历史，2026-09-01）
 
