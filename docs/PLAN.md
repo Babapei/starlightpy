@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-03（阶段 I 进行中：I0 验收已写；下一刀 I1）
+最后更新：2026-09-03（I1 完成；下一刀 I2）
 
 ---
 
@@ -105,7 +105,7 @@ G（1.x）已完成。阶段 H（H1–H6）已完成；各项默认关。阶段 
 | `extinction.py` | \(q_\lambda=A_\lambda/A_V\)：CCM、CAL、Gordon；H5 可选 `dust:<Model>` | 有 | — |
 | `model.py` | 红化后的线性组合；H4 可选按年轻旗标加 \(A_{YV}\) | 有 | — |
 | `kinematics.py` | 均匀 lnλ 上的高斯 LOSVD | 有 | H3：垫边/密采样/设计矩阵预计算 |
-| `fit.py` | NNLS；\(A_V\) 与 \(v,\sigma\) 网格；clip/EX0；`FitResult` | 有 | I1：`wavelength` 与拟合用的 `error` |
+| `fit.py` | NNLS；\(A_V\) 与 \(v,\sigma\) 网格；clip/EX0；`FitResult`（含波长与拟合误差） | 有 | — |
 | `clip.py` | NSIGMA clip + EX0 | 有 | — |
 | `optimize.py` | 占位 | 阶段 C 已跳过 | **禁止对 \(x_j\) 做 Metropolis**；G5 不要走这条对 \(x\) 的退火 |
 | `refine.py` | \((A_V,v,\sigma)\) 局部加密 + Nelder-Mead；每点 NNLS | G5 有 | 禁止对 \(x_j\) 退火 |
@@ -220,7 +220,7 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 
 H 全部完成之后。不新增 `FitConfig` 开关，不改 `pad_losvd` 默认，不把真星系当单元测试真理，不再长 `easyppxf`。一次一个小段；先改本文和 PROGRESS 验收再编码。
 
-- [ ] **I1** `FitResult` 带上拟合用的波长，以及进入 χ² 的误差（观测流量单位，与 `model` 一致）
+- [x] **I1** `FitResult` 带上拟合用的波长，以及进入 χ² 的误差（观测流量单位，与 `model` 一致）
 - [ ] **I2** `save_fit_result` / `load_fit_result` 写入并读回上述字段；旧 payload 仍能加载
 - [ ] **I3** 合成谱端到端：读入 → mask → `fit_spectrum` → 光加权产品 → 存盘 → 读回
 - [ ] **I4** pytest CI；版本号 `1.0.0`
@@ -293,7 +293,6 @@ I3：公开读入 + 预处理 + fit + 产品 + 存盘走一遍，合成谱收回
 
 **阶段 I 预告（实现对应小段时才写进代码）：**
 
-- I1：`FitResult.wavelength`、`FitResult.error`
 - I2：存盘 payload `version` 升到 2；仍读 v1
 - I4：包版本 `1.0.0`；`.github/workflows/tests.yml`
 
@@ -337,7 +336,7 @@ I3：公开读入 + 预处理 + fit + 产品 + 存盘走一遍，合成谱收回
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。当前小段是 **I1**（`FitResult` 波长与拟合误差）。未完成 I1 不要做 I2。不要开 §2 永不做的项，也不要再长 `easyppxf`。
+见 [docs/PROGRESS.md](PROGRESS.md)。当前小段是 **I2**（存盘读回波长与误差）。未完成 I2 不要做 I3。不要开 §2 永不做的项，也不要再长 `easyppxf`。
 
 ---
 

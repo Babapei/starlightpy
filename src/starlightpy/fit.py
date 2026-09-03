@@ -41,6 +41,8 @@ class FitResult:
     dropped: Optional[NDArray[np.bool_]] = None
     errors: Optional[dict] = None
     a_yv: float = 0.0
+    wavelength: Optional[NDArray[np.float64]] = None
+    error: Optional[NDArray[np.float64]] = None
 
 
 def _weights(error: NDArray[np.float64], good: NDArray[np.bool_]) -> NDArray[np.float64]:
@@ -603,4 +605,6 @@ def fit_spectrum(
         dropped=dropped,
         errors=extra_errors,
         a_yv=float(a_yv_opt),
+        wavelength=np.asarray(wave, dtype=float).copy(),
+        error=np.asarray(err, dtype=float).copy(),
     )
