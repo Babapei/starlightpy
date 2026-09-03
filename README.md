@@ -38,7 +38,7 @@
 尚未上 PyPI。从 GitHub 安装：
 
 ```bash
-pip install "starlightpy[fits] @ git+https://github.com/Babapei/starlight.git"
+pip install "starlightpy[fits] @ git+https://github.com/Babapei/starlightpy.git"
 ```
 
 | extra | 何时需要 |
@@ -147,7 +147,7 @@ MILES / E-MILES 的波长一般是**空气** Å，SDSS 是**真空**。把模板
 复现（会下载 E-MILES npz 和 SDSS lite FITS，不写入本库）：
 
 ```bash
-pip install "starlightpy[fits] @ git+https://github.com/Babapei/starlight.git"
+pip install "starlightpy[fits] @ git+https://github.com/Babapei/starlightpy.git"
 pip install matplotlib
 python examples/fit_ngc3522_emiles.py
 ```

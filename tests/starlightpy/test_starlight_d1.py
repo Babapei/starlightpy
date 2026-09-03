@@ -15,7 +15,7 @@ def test_d1_develop_page_keeps_working_readme():
 
 def test_d1_product_readme_install_and_example_figure():
     text = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "git+https://github.com/Babapei/starlight.git" in text
+    assert "git+https://github.com/Babapei/starlightpy.git" in text
     assert "default_absorption_bases" in text
     assert "to_rest_frame" in text
     assert "loaded.flux" in text
