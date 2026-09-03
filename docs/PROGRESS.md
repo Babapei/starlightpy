@@ -6,9 +6,9 @@
 
 | 项 | 值 |
 | --- | --- |
-| 阶段 | J 已完成；真实使用补丁 U1–U3 已完成 |
-| 小段 | **U1–U3 已完成**；不要开新物理阶段 |
-| 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、把 `easyppxf` 做成对等产品、改 `pad_losvd` 默认 |
+| 阶段 | 产品文档 D1 已完成 |
+| 小段 | **D1 已完成**：根 README 是产品页；工作版在 docs/DEVELOP.md |
+| 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、捆绑 SSP、把 `easyppxf` 做成对等产品、改 `pad_losvd` 默认 |
 
 ## 小段清单
 
@@ -61,6 +61,10 @@
 - [x] **U1** README 从文件到拟合 / `redshift=` 约定
 - [x] **U2** `easyppxf` 同波长不再 pPXF 断言崩溃
 - [x] **U3** 合成谱：`redshift=` 与 `to_rest_frame` 两条路径收回
+
+### 产品文档 D
+
+- [x] **D1** 根 README 产品页；工作版 → `docs/DEVELOP.md`；真星系示例图
 
 ## G1 验收（先写再做，2026-09-02）
 
@@ -387,6 +391,19 @@ README 增加最小正确用法（`fit_spectrum` + 预处理开关）和真谱�
 
 **U3 结果（2026-09-03）：通过。** `redshift=` 与 `to_rest_frame` 两条路径均收回 \(x,A_V,v,\sigma\)。
 
+## D1 验收（先写再做，2026-09-03）
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| 工作版 | 原根 README 迁走 | `docs/DEVELOP.md` 含「按 PLAN 开发」与 `阶段 I` |
+| 产品页 | 根 `README.md` | 含 `git+https` 安装、`default_absorption_bases`、`to_rest_frame`、`loaded.flux`；一段合成谱可直接执行 |
+| 示例图 | `docs/figures/` | 有 NGC 3522 图；README 图注含「不是」标准解或「不是」真理 |
+| 回归 | G7/I5/J3/U1 用户可见字符串 | 产品 README 仍含静止系清单与可选开关；`阶段 I` 改到 DEVELOP |
+
+未开始 D1 正文。
+
+**D1 结果（2026-09-03）：通过。** 工作版在 `docs/DEVELOP.md`；根 README 可 `git+https` 安装、合成谱片段可执行、含 NGC 3522 示例图（图注写明不是标准解）。
+
 ## B2 验收（历史，2026-09-01）
 
 实现：`search_kinematics=True` 时外层网格扫 \(v,\sigma\)，每个点内层仍 \(A_V\)+NNLS；`False` 时行为与 B1 相同。
@@ -453,3 +470,4 @@ README 增加最小正确用法（`fit_spectrum` + 预处理开关）和真谱�
 | 2026-09-02 | H2 | χ² 切片与重复拟合粗误差 |
 | 2026-09-02 | H3 | LOSVD 垫边、密采样、设计矩阵预计算 |
 | 2026-09-03 | U1–U3 | 真实使用：README 文件入口；easyppxf 同波长边界；两条静止系路径合成收回 |
+| 2026-09-03 | D1 | 根 README 改为产品页；工作版迁到 docs/DEVELOP.md；NGC 3522 示例图 |

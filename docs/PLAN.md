@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-03（阶段 J 完成；真实使用补丁 U1–U3）
+最后更新：2026-09-03（产品文档：根 README 对外，工作版迁到 docs/DEVELOP.md）
 
 ---
 
@@ -244,6 +244,12 @@ J 完成之后按 README 做真实调用，并用公开 SDSS FITS 测读入（**
 - [x] **U2** `easyppxf.fit_spectrum`：观测与模板同一波长时，不要把 pPXF 因默认速度边界（约 ±2900 km/s 需要模板更宽）抛出的 `AssertionError` 交给用户。裁剪 `goodpixels` 到模板能覆盖的范围；重叠太短则 `ValueError` 说明原因。这是现有入口的样板错误，不是新拟合功能。
 - [x] **U3** 合成谱测试：G2 的 `redshift=` 路径与显式 `to_rest_frame` 路径都能收回少模板 \(x,A_V,v,\sigma\)。禁止用真巡天谱当 assert 真理。
 
+### 产品文档（不是新物理）
+
+根目录 README 改为给使用者看的产品页。原先那份开发工作 README 原样迁到 [docs/DEVELOP.md](DEVELOP.md)。不新增 `FitConfig`，不捆绑 SSP，不用真星系当 pytest 真理。
+
+- [x] **D1** 根 README：安装、一段能直接跑的合成谱、真星系示例图（NGC 3522 + 用户自备 E-MILES，图注写明不是标准种群解）、FitResult / 预处理 / 可选开关 / 引用。开发合同仍只在本文与 PROGRESS。
+
 ---
 
 ## 6. 每阶段怎么验收（防止「看起来能跑」）
@@ -267,7 +273,8 @@ J1：`FitResult.flux` 与传入（或对齐后的）观测流量同单位、与 
 
 U1：README 能对照「文件 → 静止系 → 同一网格 → mask → fit」，并写明 `redshift=` 与 `to_rest_frame` 的分工。  
 U2：同一波长数组调用 `easyppxf.fit_spectrum` 不出现 pPXF `AssertionError`；模板过短则明确 `ValueError`。  
-U3：两条静止系路径走 `fit_spectrum`，收回容差与 B2 同级（\(|\Delta v|\le 50\)，\(|\Delta\sigma|\le 50\)，\(|\Delta A_V|\le 0.10\)，\(x\) atol 0.12）。
+U3：两条静止系路径走 `fit_spectrum`，收回容差与 B2 同级（\(|\Delta v|\le 50\)，\(|\Delta\sigma|\le 50\)，\(|\Delta A_V|\le 0.10\)，\(x\) atol 0.12）。  
+D1：根 README 含 `git+https` 安装与一段可执行合成谱；`docs/DEVELOP.md` 仍含开发工作页；示例图在 `docs/figures/`，图注不把真星系当真理。
 
 禁止：用和拟合器同一套近似去「验收自己」却不经过 `fit_spectrum`；禁止只画图不 assert；禁止用真巡天谱当单元测试绿灯。
 
@@ -358,21 +365,21 @@ U3：两条静止系路径走 `fit_spectrum`，收回容差与 B2 同级（\(|\D
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。阶段 J（J1–J3）与真实使用补丁 U1–U3 已完成。不要开 §2 永不做的项，也不要把 `easyppxf` 做成对等产品。
+见 [docs/PROGRESS.md](PROGRESS.md)。产品文档 D1 已完成：根 README 对外，工作版在 `docs/DEVELOP.md`。不要开 §2 永不做的项，也不要把 `easyppxf` 做成对等产品。
 
 ---
 
 ## 11. 仓库规范（文档怎么管、代码怎么长）
 
-权威顺序：**PLAN > PROGRESS > README > 代码注释 > 聊天。** 做到哪只认 [docs/PROGRESS.md](PROGRESS.md)；目标仍只认本文。
+权威顺序：**PLAN > PROGRESS > docs/DEVELOP.md > 根 README > 代码注释 > 聊天。** 目标只认本文；做到哪只认 [docs/PROGRESS.md](PROGRESS.md)。根 README 是产品页，禁止在那里发明新需求或新开关。
 
-不要再开「设计思想 / 架构愿景」第三份长文。阶段勾选、验收数字、禁止项都写在本文。
+不要再开「设计思想 / 架构愿景」第三份长文。阶段勾选、验收数字、禁止项都写在本文。开发抄写片段放 [docs/DEVELOP.md](DEVELOP.md)。
 
 **完成一个阶段 / 小段：**
 
 1. 对应测试绿（合成谱走公开 API + `assert`）。
 2. 本文该清单打勾，改「最后更新」。
-3. README 最小用法保持 G7；阶段 I 允许再加一小段「可选（默认关）」开关与存盘；U1 允许再加一小段「从文件到拟合」与 `redshift=` 约定。仍禁止第三份架构文。
+3. 产品 README（根目录）保持可安装、可抄一段就跑；G7/I5/J3/U1 的用户可见约定也写在产品页。开发阶段用语留在 DEVELOP / 本文。
 4. 不新增 `*_v2.py`、不把 pPXF 接进 `starlightpy`。
 
 **代码：**
@@ -426,6 +433,7 @@ U3：两条静止系路径走 `fit_spectrum`，收回容差与 B2 同级（\(|\D
 - **I**：1.0 工作流（结果自洽、存盘、CI、版本）。
 - **J**：存盘可画图（观测流量进 `FitResult`）。
 - **U（真实使用补丁）**：README 文件入口与 `redshift=` 约定；`easyppxf` 同波长不再断言崩溃。
+- **D（产品文档）**：根 README 给使用者；`docs/DEVELOP.md` 给开发。
 - **永不做**：§2 第三档。
 
 一个仓库。`easyppxf` 太薄，不够单独开库；不统一成 `backend=`。
