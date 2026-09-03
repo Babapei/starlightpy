@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-03（J2 完成；下一刀 J3）
+最后更新：2026-09-03（阶段 J 完成：J1–J3）
 
 ---
 
@@ -234,11 +234,7 @@ I 完成之后只补这一处：读回的 `FitResult` 要能单独对齐画「�
 
 - [x] **J1** `FitResult.flux`：拟合网格上的观测流量，与 `model` 同长度、同单位（已知 \(z\) / 空气转换之后，不是归一后的内部数组）
 - [x] **J2** 存盘 payload 写入 `flux`（version 3）；缺该字段的旧文件加载为 `None`
-- [ ] **J3** README 存盘示例写出可用 `wavelength` / `flux` / `model` 画图
-
----
-
-## 6. 每阶段怎么验收（防止「看起来能跑」）
+- [x] **J3** README 存盘示例写出可用 `wavelength` / `flux` / `model` 画图
 
 ---
 
@@ -308,7 +304,7 @@ J1：`FitResult.flux` 与传入（或对齐后的）观测流量同单位、与 
 
 `FitResult.flux`（J1）也不是 `FitConfig` 字段：拟合网格上的观测流量，与 `model` 同单位。旧存盘缺此项时加载为 `None`。
 
-**阶段 J 预告：** 无（J1–J2 已实现；下一刀只改 README）。
+**阶段 J 预告：** 无（J1–J3 已实现）。
 
 不要加：N_chains、Fortran 同名配置几十条、学习率、CNN 权重路径、`anneal_x`、`fit_emission`、`search_redshift`。
 
@@ -334,7 +330,7 @@ J1：`FitResult.flux` 与传入（或对齐后的）观测流量同单位、与 
 
 ## 9. 写 1.x 时仍适用的提醒
 
-1. **一次只做一件。** 当前只做 PROGRESS 里的 J 小段。不要同时改 `easyppxf`、不要为「更像 Fortran」加开关、不要改 `pad_losvd` 默认。
+1. **一次只做一件。** 阶段 J 已完成。不要同时改 `easyppxf`、不要为「更像 Fortran」加开关、不要改 `pad_losvd` 默认。
 2. **两个 `fit_spectrum` 不要混。** 主业是 `from starlightpy import fit_spectrum`；pPXF 请 `import easyppxf` 并起别的名字。
 3. **先合成谱，不要一上来拟合真星系。** 真谱有红移、真空/空气、仪器展宽、发射线；没做 G2–G3 时锅会甩给拟合器。不要往仓库塞 BC03。
 4. **观测和模板必须已经在同一套波长上**（或先走 G 的预处理再 `resample_to`）。`build_model` 不负责插值。
@@ -350,7 +346,7 @@ J1：`FitResult.flux` 与传入（或对齐后的）观测流量同单位、与 
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。当前小段是 **J3**（README 画图示例）。未完成 J3 不要开新阶段。不要开 §2 永不做的项，也不要再长 `easyppxf`。
+见 [docs/PROGRESS.md](PROGRESS.md)。阶段 J（J1–J3）已完成。不要开 §2 永不做的项，也不要再长 `easyppxf`。
 
 ---
 
