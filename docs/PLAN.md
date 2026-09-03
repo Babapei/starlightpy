@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-03（I3 完成；下一刀 I4）
+最后更新：2026-09-03（I4 完成；下一刀 I5）
 
 ---
 
@@ -221,8 +221,8 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 H 全部完成之后。不新增 `FitConfig` 开关，不改 `pad_losvd` 默认，不把真星系当单元测试真理，不再长 `easyppxf`。一次一个小段；先改本文和 PROGRESS 验收再编码。
 
 - [x] **I1** `FitResult` 带上拟合用的波长，以及进入 χ² 的误差（观测流量单位，与 `model` 一致）
-- [x] **I3** 合成谱端到端：读入 → mask → `fit_spectrum` → 光加权产品 → 存盘 → 读回
-- [ ] **I4** pytest CI；版本号 `1.0.0`
+- [x] **I2** `save_fit_result` / `load_fit_result` 写入并读回上述字段；旧 payload 仍能加载
+- [x] **I4** pytest CI；版本号 `1.0.0`
 - [ ] **I5** README 一小段可选（默认关）开关与存盘；仍禁止第三份架构文
 
 ---
@@ -290,9 +290,7 @@ I3：公开读入 + 预处理 + fit + 产品 + 存盘走一遍，合成谱收回
 
 `FitResult.wavelength` / `FitResult.error`（I1）也不是 `FitConfig` 字段：波长是拟合用的网格；误差是进入 χ² 的那份，单位与返回的 `model` 相同。旧存盘缺这两项时加载为 `None`。
 
-**阶段 I 预告（实现对应小段时才写进代码）：**
-
-- I4：包版本 `1.0.0`；`.github/workflows/tests.yml`
+**阶段 I 预告：** 无（I4 的版本与 CI 已实现；下一刀只改 README）。
 
 不要加：N_chains、Fortran 同名配置几十条、学习率、CNN 权重路径、`anneal_x`、`fit_emission`、`search_redshift`。
 
@@ -334,7 +332,7 @@ I3：公开读入 + 预处理 + fit + 产品 + 存盘走一遍，合成谱收回
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。当前小段是 **I4**（CI 与版本 `1.0.0`）。未完成 I4 不要做 I5。不要开 §2 永不做的项，也不要再长 `easyppxf`。
+见 [docs/PROGRESS.md](PROGRESS.md)。当前小段是 **I5**（README 可选开关与存盘）。未完成 I5 不要开新阶段。不要开 §2 永不做的项，也不要再长 `easyppxf`。
 
 ---
 
