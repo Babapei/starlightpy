@@ -81,13 +81,51 @@ def extinction_gordon(wavelengths: ArrayLike, table: str = "GD1") -> NDArray[np.
     return interpolator(np.asarray(wavelengths, dtype=float) * 1e-4)
 
 
+def _dust_extinction_curve(
+    wavelengths: ArrayLike, model_name: str, r_v: float
+) -> NDArray[np.float64]:
+    name = model_name.strip()
+    if not name or not name.isidentifier() or name.startswith("_") or name.startswith("Base"):
+        raise ValueError(f"Unknown dust_extinction model {model_name!r}.")
+    try:
+        from astropy import units as u
+        from dust_extinction import parameter_averages
+    except ImportError as exc:
+        raise ImportError(
+            "law='dust:...' requires the dust_extinction package. "
+            "Install with: pip install 'starlightpy[dust]'."
+        ) from exc
+    cls = getattr(parameter_averages, name, None)
+    if cls is None:
+        matches = [
+            item
+            for item in dir(parameter_averages)
+            if item.lower() == name.lower() and item.isidentifier() and not item.startswith("_")
+        ]
+        cls = getattr(parameter_averages, matches[0], None) if len(matches) == 1 else None
+    if cls is None or not isinstance(cls, type) or not hasattr(cls, "evaluate"):
+        raise ValueError(
+            f"Unknown dust_extinction model {model_name!r}. "
+            "Use a class name from dust_extinction.parameter_averages (e.g. F99)."
+        )
+    wave = np.asarray(wavelengths, dtype=float)
+    try:
+        model = cls(Rv=float(r_v))
+    except TypeError:
+        model = cls()
+    return np.asarray(model(wave * u.AA), dtype=float)
+
+
 def get_extinction_curve(
     wavelengths: ArrayLike,
     law: str = "CCM",
     r_v: float = 3.1,
     custom_law_path: Optional[str] = None,
 ) -> NDArray[np.float64]:
-    law = law.upper()
+    raw = str(law).strip()
+    if raw.lower().startswith("dust:"):
+        return _dust_extinction_curve(wavelengths, raw.split(":", 1)[1], r_v)
+    law = raw.upper()
     if law == "CCM":
         return extinction_ccm89(wavelengths, r_v)
     if law == "CAL":

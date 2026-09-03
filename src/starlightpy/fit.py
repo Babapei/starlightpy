@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass, replace
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -13,10 +13,12 @@ from scipy.optimize import nnls
 from .clip import clip_outliers, keep_components
 from .config import FitConfig
 from .extinction import get_extinction_curve
-from .kinematics import apply_losvd
-from .model import build_model, normalize_at, normalize_bases, reddening_factor
+from .kinematics import LosvdDesignCache, apply_losvd, losvd_design
+from .model import build_model, normalize_at, normalize_bases, reddening_columns
 from .preprocess import align_observation, estimate_rms_error, match_instrumental_fwhm
+from .errors import halfwidth_chi2_plus_one, scan_slice, x_fraction_std
 from .refine import refine_av_v_sigma
+from .regularize import XRegularizer
 
 
 @dataclass
@@ -37,6 +39,8 @@ class FitResult:
     obs_scale: float = 1.0
     config: Optional[FitConfig] = None
     dropped: Optional[NDArray[np.bool_]] = None
+    errors: Optional[dict] = None
+    a_yv: float = 0.0
 
 
 def _weights(error: NDArray[np.float64], good: NDArray[np.bool_]) -> NDArray[np.float64]:
@@ -64,15 +68,41 @@ def _design_and_nnls(
     a_v: float,
     v0_kms: float,
     sigma_kms: float,
+    x_reg: Optional[XRegularizer] = None,
+    pad_losvd: bool = False,
+    losvd_oversample: int = 1,
+    losvd_cache: Optional[LosvdDesignCache] = None,
+    a_yv: float = 0.0,
+    young_flags: Optional[NDArray[np.float64]] = None,
 ) -> Tuple[NDArray[np.float64], NDArray[np.float64], float]:
-    r = reddening_factor(q, a_v, q0)
-    reddened = bases_n * r[:, None]
-    n_comp = bases_n.shape[1]
-    design = np.empty_like(reddened)
-    for j in range(n_comp):
-        design[:, j] = apply_losvd(wave, reddened[:, j], v0_kms, sigma_kms)
-    x_hat, _ = nnls(design * weights[:, None], obs_n * weights)
-    model = apply_losvd(wave, build_model(x_hat, bases_n, q, a_v, q_lambda0=q0), v0_kms, sigma_kms)
+    rmat = reddening_columns(
+        q, a_v, q0, bases_n.shape[1], a_yv=a_yv, young_flags=young_flags
+    )
+    reddened = bases_n * rmat
+    if losvd_cache is None:
+        design = losvd_design(
+            wave, reddened, v0_kms, sigma_kms, pad=pad_losvd, oversample=losvd_oversample
+        )
+    else:
+        design = losvd_cache.design(
+            wave, reddened, v0_kms, sigma_kms, pad=pad_losvd, oversample=losvd_oversample
+        )
+    weighted_design = design * weights[:, None]
+    weighted_obs = obs_n * weights
+    if x_reg is None:
+        x_hat, _ = nnls(weighted_design, weighted_obs)
+    else:
+        x_hat = x_reg.solve(weighted_design, weighted_obs)
+    model = apply_losvd(
+        wave,
+        build_model(
+            x_hat, bases_n, q, a_v, q_lambda0=q0, a_yv=a_yv, young_flags=young_flags
+        ),
+        v0_kms,
+        sigma_kms,
+        pad=pad_losvd,
+        oversample=losvd_oversample,
+    )
     chi2 = float(np.sum(((obs_n - model) * weights) ** 2))
     return x_hat, model, chi2
 
@@ -87,20 +117,150 @@ def _best_av_for_kinematics(
     a_v_grid: NDArray[np.float64],
     v0_kms: float,
     sigma_kms: float,
-) -> Tuple[NDArray[np.float64], float, NDArray[np.float64], float, NDArray[np.float64]]:
+    x_reg: Optional[XRegularizer] = None,
+    pad_losvd: bool = False,
+    losvd_oversample: int = 1,
+    losvd_cache: Optional[LosvdDesignCache] = None,
+    a_yv_grid: Optional[NDArray[np.float64]] = None,
+    young_flags: Optional[NDArray[np.float64]] = None,
+) -> Tuple[NDArray[np.float64], float, NDArray[np.float64], float, NDArray[np.float64], float]:
     n_comp = bases_n.shape[1]
-    chi2_grid = np.empty(a_v_grid.size)
-    x_grid = np.empty((a_v_grid.size, n_comp))
-    models = np.empty((a_v_grid.size, wave.size))
-    for i, a_v in enumerate(a_v_grid):
-        x_hat, model, chi2 = _design_and_nnls(
-            wave, obs_n, weights, bases_n, q, q0, float(a_v), v0_kms, sigma_kms
+    ay_vals = np.array([0.0]) if a_yv_grid is None else np.asarray(a_yv_grid, dtype=float)
+    best = None
+    for a_yv in ay_vals:
+        chi2_grid = np.empty(a_v_grid.size)
+        x_grid = np.empty((a_v_grid.size, n_comp))
+        models = np.empty((a_v_grid.size, wave.size))
+        for i, a_v in enumerate(a_v_grid):
+            x_hat, model, chi2 = _design_and_nnls(
+                wave,
+                obs_n,
+                weights,
+                bases_n,
+                q,
+                q0,
+                float(a_v),
+                v0_kms,
+                sigma_kms,
+                x_reg=x_reg,
+                pad_losvd=pad_losvd,
+                losvd_oversample=losvd_oversample,
+                losvd_cache=losvd_cache,
+                a_yv=float(a_yv),
+                young_flags=young_flags,
+            )
+            x_grid[i] = x_hat
+            models[i] = model
+            chi2_grid[i] = chi2
+        ib = int(np.argmin(chi2_grid))
+        if best is None or chi2_grid[ib] < best[0]:
+            best = (
+                float(chi2_grid[ib]),
+                x_grid[ib].copy(),
+                float(a_v_grid[ib]),
+                models[ib].copy(),
+                chi2_grid.copy(),
+                float(a_yv),
+            )
+    chi2, x_hat, a_v, model, chi2_grid, a_yv = best
+    return x_hat, a_v, model, chi2, chi2_grid, a_yv
+
+
+def _errors_chi2_slice(
+    config: FitConfig,
+    wave: NDArray[np.float64],
+    obs_n: NDArray[np.float64],
+    weights: NDArray[np.float64],
+    bases_n: NDArray[np.float64],
+    q: NDArray[np.float64],
+    q0: float,
+    a_v_opt: float,
+    v_opt: float,
+    s_opt: float,
+    chi2: float,
+    x_reg: Optional[XRegularizer],
+    pad_losvd: bool = False,
+    losvd_oversample: int = 1,
+    losvd_cache: Optional[LosvdDesignCache] = None,
+    a_yv: float = 0.0,
+    young_flags: Optional[NDArray[np.float64]] = None,
+) -> dict:
+    def chi2_at_av(av: float) -> float:
+        _, _, c = _design_and_nnls(
+            wave,
+            obs_n,
+            weights,
+            bases_n,
+            q,
+            q0,
+            av,
+            v_opt,
+            s_opt,
+            x_reg=x_reg,
+            pad_losvd=pad_losvd,
+            losvd_oversample=losvd_oversample,
+            losvd_cache=losvd_cache,
+            a_yv=a_yv,
+            young_flags=young_flags,
         )
-        x_grid[i] = x_hat
-        models[i] = model
-        chi2_grid[i] = chi2
-    best = int(np.argmin(chi2_grid))
-    return x_grid[best], float(a_v_grid[best]), models[best], float(chi2_grid[best]), chi2_grid
+        return c
+
+    lo = max(config.a_v_bounds[0], a_v_opt - 2.0 * config.a_v_step)
+    hi = min(config.a_v_bounds[1], a_v_opt + 2.0 * config.a_v_step)
+    grid, chi2s = scan_slice(lo, hi, 21, chi2_at_av)
+    out: Dict[str, float] = {
+        "a_v": halfwidth_chi2_plus_one(grid, chi2s, chi2, config.a_v_step),
+    }
+    if config.search_kinematics:
+        def chi2_at_v(vv: float) -> float:
+            _, _, c = _design_and_nnls(
+                wave,
+                obs_n,
+                weights,
+                bases_n,
+                q,
+                q0,
+                a_v_opt,
+                vv,
+                s_opt,
+                x_reg=x_reg,
+                pad_losvd=pad_losvd,
+                losvd_oversample=losvd_oversample,
+                losvd_cache=losvd_cache,
+                a_yv=a_yv,
+                young_flags=young_flags,
+            )
+            return c
+
+        def chi2_at_s(ss: float) -> float:
+            _, _, c = _design_and_nnls(
+                wave,
+                obs_n,
+                weights,
+                bases_n,
+                q,
+                q0,
+                a_v_opt,
+                v_opt,
+                ss,
+                x_reg=x_reg,
+                pad_losvd=pad_losvd,
+                losvd_oversample=losvd_oversample,
+                losvd_cache=losvd_cache,
+                a_yv=a_yv,
+                young_flags=young_flags,
+            )
+            return c
+
+        vlo = max(config.v_bounds[0], v_opt - 2.0 * config.v_step)
+        vhi = min(config.v_bounds[1], v_opt + 2.0 * config.v_step)
+        vg, vc = scan_slice(vlo, vhi, 15, chi2_at_v)
+        out["v0_kms"] = halfwidth_chi2_plus_one(vg, vc, chi2, config.v_step)
+        slo = max(config.sigma_bounds[0], s_opt - 2.0 * config.sigma_step)
+        shi = min(config.sigma_bounds[1], s_opt + 2.0 * config.sigma_step)
+        sg, sc = scan_slice(slo, shi, 15, chi2_at_s)
+        out["sigma_kms"] = halfwidth_chi2_plus_one(sg, sc, chi2, config.sigma_step)
+    return out
 
 
 def fit_spectrum(
@@ -110,6 +270,8 @@ def fit_spectrum(
     base_matrix: ArrayLike,
     mask: Optional[ArrayLike] = None,
     config: Optional[FitConfig] = None,
+    template_ages: Optional[ArrayLike] = None,
+    young_flags: Optional[ArrayLike] = None,
 ) -> FitResult:
     """Fit x_j and A_V; optionally grid-search v and sigma; clip/EX0 if configured."""
     if config is None:
@@ -137,6 +299,32 @@ def fit_spectrum(
         raise ValueError("flux contains non-finite values.")
     if not np.all(np.isfinite(bases)):
         raise ValueError("base_matrix contains non-finite values.")
+
+    x_reg = XRegularizer.from_config(
+        config.regularize_x,
+        template_ages,
+        n_comp,
+        config.regularize_strength,
+        config.age_bin_edges,
+    )
+    if config.error_method is not None:
+        method = config.error_method.lower()
+        if method not in ("chi2_slice", "repeat"):
+            raise ValueError("error_method must be None, 'chi2_slice', or 'repeat'.")
+        if method == "repeat" and config.n_repeat < 2:
+            raise ValueError("n_repeat must be >= 2.")
+    else:
+        method = None
+
+    young_arr: Optional[NDArray[np.float64]] = None
+    a_yv_grid = None
+    if config.fit_ayv:
+        if young_flags is None:
+            raise ValueError("young_flags is required when fit_ayv is True.")
+        young_arr = np.asarray(young_flags, dtype=float)
+        if young_arr.shape != (n_comp,):
+            raise ValueError("young_flags must have one value per template.")
+        a_yv_grid = _closed_grid(*config.a_yv_bounds, config.a_yv_step)
 
     if config.redshift < 0:
         raise ValueError("redshift must be >= 0.")
@@ -192,6 +380,14 @@ def fit_spectrum(
     q0 = float(np.median(q[win]))
     weights = _weights(err_n, good)
     a_v_grid = _closed_grid(*config.a_v_bounds, config.a_v_step)
+    if config.losvd_oversample < 1:
+        raise ValueError("losvd_oversample must be >= 1.")
+    losvd_opts = dict(
+        pad_losvd=config.pad_losvd,
+        losvd_oversample=config.losvd_oversample,
+        losvd_cache=LosvdDesignCache(),
+    )
+    ayv_opts = dict(a_yv_grid=a_yv_grid, young_flags=young_arr)
 
     if config.search_kinematics:
         v_grid = _closed_grid(*config.v_bounds, config.v_step)
@@ -199,16 +395,27 @@ def fit_spectrum(
         best = None
         for v0 in v_grid:
             for sig in s_grid:
-                x_hat, a_v, model_n, chi2, chi2_av = _best_av_for_kinematics(
-                    wave, obs_n, weights, bases_n, q, q0, a_v_grid, float(v0), float(sig)
+                x_hat, a_v, model_n, chi2, chi2_av, a_yv = _best_av_for_kinematics(
+                    wave,
+                    obs_n,
+                    weights,
+                    bases_n,
+                    q,
+                    q0,
+                    a_v_grid,
+                    float(v0),
+                    float(sig),
+                    x_reg=x_reg,
+                    **losvd_opts,
+                    **ayv_opts,
                 )
                 if best is None or chi2 < best[0]:
-                    best = (chi2, x_hat, a_v, model_n, chi2_av, float(v0), float(sig))
+                    best = (chi2, x_hat, a_v, model_n, chi2_av, float(v0), float(sig), a_yv)
         if best is None:
             raise ValueError("Kinematic grids are empty.")
-        chi2, x_opt, a_v_opt, model_n, chi2_av, v_opt, s_opt = best
+        chi2, x_opt, a_v_opt, model_n, chi2_av, v_opt, s_opt, a_yv_opt = best
     else:
-        x_opt, a_v_opt, model_n, chi2, chi2_av = _best_av_for_kinematics(
+        x_opt, a_v_opt, model_n, chi2, chi2_av, a_yv_opt = _best_av_for_kinematics(
             wave,
             obs_n,
             weights,
@@ -218,13 +425,30 @@ def fit_spectrum(
             a_v_grid,
             config.v0_kms,
             config.sigma_kms,
+            x_reg=x_reg,
+            **losvd_opts,
+            **ayv_opts,
         )
         v_opt = config.v0_kms
         s_opt = config.sigma_kms
 
     if config.refine_kinematics:
         def _eval(av: float, vv: float, ss: float):
-            return _design_and_nnls(wave, obs_n, weights, bases_n, q, q0, av, vv, ss)
+            return _design_and_nnls(
+                wave,
+                obs_n,
+                weights,
+                bases_n,
+                q,
+                q0,
+                av,
+                vv,
+                ss,
+                x_reg=x_reg,
+                a_yv=a_yv_opt,
+                young_flags=young_arr,
+                **losvd_opts,
+            )
 
         x_opt, a_v_opt, model_n, chi2, v_opt, s_opt = refine_av_v_sigma(
             _eval,
@@ -239,8 +463,19 @@ def fit_spectrum(
             sigma_bounds=config.sigma_bounds,
             vary_kinematics=config.search_kinematics,
         )
-        _, _, _, _, chi2_av = _best_av_for_kinematics(
-            wave, obs_n, weights, bases_n, q, q0, a_v_grid, v_opt, s_opt
+        _, _, _, _, chi2_av, _ = _best_av_for_kinematics(
+            wave,
+            obs_n,
+            weights,
+            bases_n,
+            q,
+            q0,
+            a_v_grid,
+            v_opt,
+            s_opt,
+            x_reg=x_reg,
+            **losvd_opts,
+            **ayv_opts,
         )
 
     n_clipped = 0
@@ -250,7 +485,7 @@ def fit_spectrum(
         if n_clipped > 0:
             good = clipped_good
             weights = _weights(err_n, good)
-            x_opt, a_v_opt, model_n, chi2, chi2_av = _best_av_for_kinematics(
+            x_opt, a_v_opt, model_n, chi2, chi2_av, a_yv_opt = _best_av_for_kinematics(
                 wave,
                 obs_n,
                 weights,
@@ -260,6 +495,9 @@ def fit_spectrum(
                 a_v_grid,
                 v_opt,
                 s_opt,
+                x_reg=x_reg,
+                **losvd_opts,
+                **ayv_opts,
             )
 
     n_used = n_comp
@@ -269,7 +507,7 @@ def fit_spectrum(
         x_frac_now = x_opt / x_sum if x_sum > 0 else x_opt
         keep = keep_components(x_frac_now, config.x_min_keep)
         if np.any(~keep):
-            x_sub, a_v_opt, model_n, chi2, chi2_av = _best_av_for_kinematics(
+            x_sub, a_v_opt, model_n, chi2, chi2_av, a_yv_opt = _best_av_for_kinematics(
                 wave,
                 obs_n,
                 weights,
@@ -279,6 +517,10 @@ def fit_spectrum(
                 a_v_grid,
                 v_opt,
                 s_opt,
+                x_reg=x_reg.restrict(keep) if x_reg is not None else None,
+                **losvd_opts,
+                a_yv_grid=a_yv_grid,
+                young_flags=young_arr[keep] if young_arr is not None else None,
             )
             x_full = np.zeros(n_comp, dtype=float)
             x_full[keep] = x_sub
@@ -290,6 +532,58 @@ def fit_spectrum(
     dof = max(n_good - n_used - 1, 1)
     x_sum = float(np.sum(x_opt))
     x_frac = x_opt / x_sum if x_sum > 0 else x_opt
+
+    extra_errors = None
+    if method == "chi2_slice":
+        extra_errors = _errors_chi2_slice(
+            config,
+            wave,
+            obs_n,
+            weights,
+            bases_n,
+            q,
+            q0,
+            a_v_opt,
+            v_opt,
+            s_opt,
+            chi2,
+            x_reg,
+            pad_losvd=losvd_opts["pad_losvd"],
+            losvd_oversample=losvd_opts["losvd_oversample"],
+            losvd_cache=losvd_opts["losvd_cache"],
+            a_yv=a_yv_opt,
+            young_flags=young_arr,
+        )
+    elif method == "repeat":
+        inner = replace(
+            config,
+            error_method=None,
+            redshift=0.0,
+            wave_frame="as_is",
+            fwhm_data=None,
+            fwhm_template=None,
+            clip_nsigma=None,
+        )
+        rng = np.random.default_rng(config.repeat_seed)
+        model_obs = model_n * obs_scale
+        samples = []
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            for _ in range(config.n_repeat):
+                noisy = model_obs + rng.normal(0.0, err)
+                rep = fit_spectrum(
+                    wave,
+                    noisy,
+                    err,
+                    bases,
+                    mask=good,
+                    config=inner,
+                    template_ages=template_ages,
+                    young_flags=young_flags,
+                )
+                samples.append(rep.x_fraction)
+        extra_errors = {"x": x_fraction_std(np.vstack(samples))}
+
     return FitResult(
         x=x_opt,
         x_fraction=x_frac,
@@ -307,4 +601,6 @@ def fit_spectrum(
         obs_scale=float(obs_scale),
         config=config,
         dropped=dropped,
+        errors=extra_errors,
+        a_yv=float(a_yv_opt),
     )

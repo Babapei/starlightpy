@@ -6,9 +6,9 @@
 
 | 项 | 值 |
 | --- | --- |
-| 阶段 | G（1.x）**已完成** |
-| 小段 | **G7 已完成**；不要自动开始 H |
-| 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、未改合同就开 H、再长 `easyppxf` |
+| 阶段 | H（研究可用） |
+| 小段 | **H6 已完成**；阶段 H（H1–H6）全部完成 |
+| 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、再长 `easyppxf`、未写验收就开下一 H 项 |
 
 ## 小段清单
 
@@ -35,7 +35,12 @@
 
 ### 阶段 H
 
-未开始。G 已完成；H 仍默认关，未改合同不准做。
+- [x] **H1** 多模板非负正则或按年龄箱
+- [x] H2 χ² 切片 / 粗误差
+- [x] H3 LOSVD 垫边与设计矩阵预计算
+- [x] H4 可选 AYV
+- [x] H5 可选 `dust_extinction`
+- [x] H6 npz/json 存盘
 
 ## G1 验收（先写再做，2026-09-02）
 
@@ -138,6 +143,101 @@ README 增加最小正确用法（`fit_spectrum` + 预处理开关）和真谱�
 
 **G7 结果（2026-09-02）：通过。** README 含最小正确用法与静止系 / 波长 / 分辨率 / 发射线 / 简并清单；G1–G7 全勾。
 
+## H1 验收（先写再做，2026-09-02）
+
+默认 `regularize_x=None`，行为与 G 相同。打开时 \(x_j\) 仍 NNLS（可加差分行或先按年龄箱塌缩），需要 `template_ages`。同龄差分用 \(\exp(-|\Delta\log_{10}t|/0.5\,\mathrm{dex})\) 加权，避免年轻/年老被强行拉平。
+
+合成：6 个吸收线模板，三年轻（几乎一样）三年老；真值 \(x=(0.40,0,0,0.60,0,0)\)，\(A_V=0.30\)，无运动学。走 `fit_spectrum`。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| 年龄箱 | `regularize_x="age_bins"`，`age_bin_edges=(0,1e8,1e11)` | 年轻箱 \(\sum x\) 与年老箱 \(|\Delta|\le 0.12\)；箱内分量极差 \(\le 0.05\)；\(x\ge 0\) |
+| 对照 | 同一数据默认关正则 | 两箱光和仍 \(|\Delta|\le 0.12\)，但年轻箱内极差 \(> 0.08\) |
+| 平滑 | `smooth_age` 且 `regularize_strength=1` | 年轻箱内极差小于对照；\(x\ge 0\) |
+| 拒绝 | 开正则且 `template_ages=None` | `ValueError` |
+
+未开始 H1 代码。
+
+**H1 结果（2026-09-02）：通过。** 年龄箱均分光和；未正则箱内稀疏；smooth_age 缩小同龄极差；缺年龄 raise。
+
+## H2 验收（先写再做，2026-09-02）
+
+默认关。`error_method=None` 时 `FitResult` 不含误差产品。打开后用 χ² 切片（固定其它参数，扫 \(A_V\) 或 \(v,\sigma\)）给出粗 1σ 半宽：χ²(θ) ≤ χ²_min + 1。不声称协方差或贝叶斯区间。可选对合成噪声做少量重复拟合，报告 \(x\) 的标准差。\(x_j\) 仍 NNLS。
+
+合成：无噪声 3 模板收回路径，真值 \(A_V=0.30\)。另：SNR=30 重复拟合。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| 切片 | `error_method="chi2_slice"` | `FitResult.errors` 含 `a_v` 半宽；真值落在 \(\hat A_V\pm\) 半宽（无噪声半宽可很小但有限） |
+| 对照 | `error_method=None` | `errors is None` |
+| 重复 | SNR=30，`error_method="repeat"`，`n_repeat=5`，固定种子 | `errors["x"]` 长度 = n_comp，非负 |
+
+未开始 H2 代码。
+
+**H2 结果（2026-09-02）：通过。** χ² 切片半宽盖住真 \(A_V\)；默认 `errors is None`；重复拟合给出非负 \(x\) 标准差。
+
+## H3 验收（先写再做，2026-09-02）
+
+默认 `pad_losvd=False`、`losvd_oversample=1`，与 G 的 LOSVD 相同。打开垫边：在均匀 lnλ 上向两端延拓再卷积，压低谱端伪结构。`losvd_oversample≥2` 把 lnλ 网格加密。同一 \((v,\sigma)\) 的设计矩阵可预计算，数值与逐列 LOSVD 一致。
+
+合成：吸收线靠近蓝端（~3850Å），真值 \(v=100\)，\(\sigma=150\)，告诉真值运动学。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| 垫边 | `pad_losvd=True`，`losvd_oversample=2` | \(|\Delta A_V|\le 0.10\)，\(x\) atol 0.12；χ² ≤ 不垫边 |
+| 对照 | 同一谱默认 LOSVD | χ² 不小于垫边 |
+| 预计算 | 同一 \((v,\sigma)\) 两次 `losvd_design` | `allclose` |
+
+未开始 H3 代码。
+
+**H3 结果（2026-09-02）：通过。** 蓝端吸收线垫边+加密收回；χ² 不差于默认 LOSVD；`losvd_design` 两次一致。
+
+## H4 验收（先写再做，2026-09-02）
+
+默认 `fit_ayv=False`，全体模板共用 \(A_V\)。打开后年轻旗标为真的模板用 \(A_V+A_{YV}\)，年老只用 \(A_V\)。需要 `young_flags`。两套真值：有 AYV / 无 AYV。
+
+合成：3 模板，第一年轻；无运动学。有 AYV 真值 \(A_V=0.20\)，\(A_{YV}=0.40\)，\(x=(0.50,0.35,0.15)\)。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| 有 AYV | `fit_ayv=True` + `young_flags` | \(|\Delta A_V|\le 0.10\)，\(|\Delta A_{YV}|\le 0.15\)，\(x\) atol 0.12 |
+| 对照 | 同一有 AYV 的谱但 `fit_ayv=False` | χ² 更大，或 \(A_V\) 偏到年轻尘埃上 |
+| 无 AYV | 真值 \(A_{YV}=0\)，`fit_ayv=True` | \(A_{YV}\) 落在 0 附近（≤ 一步网格），\(x,A_V\) 仍收回 |
+| 拒绝 | `fit_ayv=True` 无旗标 | `ValueError` |
+
+**H4 结果（2026-09-02）：通过。** 打开 AYV 收回 \(A_V,A_{YV},x\)；共用 \(A_V\) 更差；真值 \(A_{YV}=0\) 时估计落在 0 附近；无旗标 raise。
+
+## H5 验收（先写再做，2026-09-02）
+
+默认仍用自带 CCM / CAL / Gordon。`law="dust:<Model>"` 时才对接 `dust_extinction`（例如 `dust:F99`）。不改默认 `law="CCM"` 的数值。缺包时明确报错，不静默回退到自带曲线。
+
+合成：3 模板，真值 \(x=(0.50,0.35,0.15)\)，\(A_V=0.30\)，无运动学。真消光用 F99。走 `fit_spectrum`。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| dust F99 | `law="dust:F99"` | \(|\Delta A_V|\le 0.10\)，\(x\) atol 0.12 |
+| 对照 | 同一 F99 谱但 `law="CCM"` | χ² 更大，或 \(|\Delta A_V|>0.05\) |
+| 默认 | 自带 CCM 合成 + 默认 `law` | 仍收回；此路径不 `import dust_extinction` |
+| 缺依赖 | 请求 `dust:F99` 但包不可用 | `ImportError` 或 `ValueError`，消息含 `dust_extinction` |
+| 未知模型 | `law="dust:NOTALAW"` | `ValueError` |
+
+**H5 结果（2026-09-02）：通过。** `dust:F99` 收回；错用自带 CCM 更差；默认 CCM 不变；缺包与未知模型明确报错。
+
+## H6 验收（先写再做，2026-09-02）
+
+自己的 npz / json 存盘，**不是** Fortran `.out`。默认 `fit_spectrum` 不写盘。保存并读回 `FitResult` 的关键字段：\(x\)、\(x\) 分数、\(A_V\)、\(A_{YV}\)、\(v,\sigma\)、χ²、model、good。config 有则一并保存。走公开 API。
+
+合成：3 模板无噪声收回路径，真值 \(x=(0.50,0.35,0.15)\)，\(A_V=0.30\)。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| npz | `save_fit_result(path.npz)` 再 `load_fit_result` | \(x,A_V,v,\sigma,\chi^2\) 与内存一致；model/good 形状一致 |
+| json | 同上，后缀 `.json` | 同上 |
+| 默认 | 只 `fit_spectrum` | 不产生 `.out` 文件 |
+| 拒绝 | 后缀既不是 npz 也不是 json | `ValueError` |
+
+**H6 结果（2026-09-02）：通过。** npz 与 json 读回 \(x,A_V,v,\sigma,\chi^2\) 与 model/good；`fit_spectrum` 不写 `.out`；其它后缀 raise。
+
 ## B2 验收（历史，2026-09-01）
 
 实现：`search_kinematics=True` 时外层网格扫 \(v,\sigma\)，每个点内层仍 \(A_V\)+NNLS；`False` 时行为与 B1 相同。
@@ -200,3 +300,6 @@ README 增加最小正确用法（`fit_spectrum` + 预处理开关）和真谱�
 | 2026-09-02 | G5 | (A_V,v,σ) 局部加密，x_j 仍 NNLS |
 | 2026-09-02 | G6 | light_to_mass 与光加权年龄/Z |
 | 2026-09-02 | G7 | README 用法 + 真谱清单；阶段 G 完成 |
+| 2026-09-02 | H1 | 年龄箱 / smooth_age 非负正则 |
+| 2026-09-02 | H2 | χ² 切片与重复拟合粗误差 |
+| 2026-09-02 | H3 | LOSVD 垫边、密采样、设计矩阵预计算 |

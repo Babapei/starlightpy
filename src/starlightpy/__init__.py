@@ -12,12 +12,14 @@ from .io import (
     load_base_master,
     load_base_spectra,
     load_cxt,
+    load_fit_result,
     load_mask,
     load_sdss_fits,
     load_spectrum,
     resample_to,
+    save_fit_result,
 )
-from .kinematics import apply_losvd
+from .kinematics import apply_losvd, losvd_design
 from .model import build_model, normalize_at
 from .preprocess import (
     air_to_vacuum,
@@ -40,6 +42,7 @@ __all__ = [
     "FitConfig",
     "FitResult",
     "apply_losvd",
+    "losvd_design",
     "apply_mask",
     "build_model",
     "fit_spectrum",
@@ -50,9 +53,11 @@ __all__ = [
     "load_base_master",
     "load_base_spectra",
     "load_cxt",
+    "load_fit_result",
     "load_mask",
     "load_sdss_fits",
     "load_spectrum",
+    "save_fit_result",
     "clip_and_refit",
     "clip_outliers",
     "keep_components",

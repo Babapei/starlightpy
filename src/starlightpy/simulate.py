@@ -55,6 +55,8 @@ def mock_observation(
     config: Optional[FitConfig] = None,
     snr: Optional[float] = None,
     rng: Optional[np.random.Generator] = None,
+    a_yv: float = 0.0,
+    young_flags: Optional[ArrayLike] = None,
 ) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Return flux and error on the same grid.
 
@@ -74,7 +76,9 @@ def mock_observation(
     if not np.any(win):
         raise ValueError("norm_window does not overlap the wavelength array.")
     q0 = float(np.median(q[win]))
-    mixed = build_model(x, bases_n, q, a_v, q_lambda0=q0)
+    mixed = build_model(
+        x, bases_n, q, a_v, q_lambda0=q0, a_yv=a_yv, young_flags=young_flags
+    )
     model = apply_losvd(wave, mixed, v0_kms, sigma_kms)
     _, model_scale = normalize_at(wave, model, config.norm_window)
     flux = model / model_scale

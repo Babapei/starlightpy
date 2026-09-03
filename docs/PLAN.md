@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-02（阶段 G / 1.x 完成）
+最后更新：2026-09-02（阶段 H 完成：H1–H6）
 
 ---
 
@@ -70,7 +70,7 @@ M_\lambda = \left(\sum_j x_j\, b_{j,\lambda}\, r_\lambda(A_V)\right) \otimes G(v
 - 可选 AYV（模板要有年轻旗标 + 有/无 AYV 两套真值）
 - 可选对接 `dust_extinction`；自己的 npz/json 存盘（**不是**官方 `.out`）
 
-G（1.x）已完成。H 默认关，每项单独改合同再开。
+G（1.x）已完成。阶段 H（H1–H6）已完成；各项默认关。
 
 ### 永不做（不是「以后可选」）
 
@@ -101,14 +101,16 @@ G（1.x）已完成。H 默认关，每项单独改合同再开。
 | 文件 | 职责 | 现在 | 以后 |
 | --- | --- | --- | --- |
 | `config.py` | `FitConfig` 白名单 | 有 v0.1 字段 | G 预告字段见 §7；不要加退火温度表 |
-| `io.py` | `.cxt` / mask / base / gzip / FITS / `iter_ascii_spectra` / `resample_to` | 有 | 不要作业调度 |
-| `extinction.py` | \(q_\lambda=A_\lambda/A_V\)：CCM、CAL、Gordon | 有 | H：可选 `dust_extinction` |
-| `model.py` | 红化后的线性组合 | 有 | H：可选 AYV |
-| `kinematics.py` | 均匀 lnλ 上的高斯 LOSVD | 有 | G3：LSF 对齐在 preprocess；H：垫边/密采样 |
+| `io.py` | `.cxt` / mask / base / gzip / FITS / `iter_ascii_spectra` / `resample_to`；H6 npz/json 存盘 | 有 | 不要作业调度；不要 Fortran `.out` |
+| `extinction.py` | \(q_\lambda=A_\lambda/A_V\)：CCM、CAL、Gordon；H5 可选 `dust:<Model>` | 有 | — |
+| `model.py` | 红化后的线性组合；H4 可选按年轻旗标加 \(A_{YV}\) | 有 | — |
+| `kinematics.py` | 均匀 lnλ 上的高斯 LOSVD | 有 | H3：垫边/密采样/设计矩阵预计算 |
 | `fit.py` | NNLS；\(A_V\) 与 \(v,\sigma\) 网格；clip/EX0；`FitResult` | 有 | G1 字段已加；G5 局部加密（`refine.py`） |
 | `clip.py` | NSIGMA clip + EX0 | 有 | — |
 | `optimize.py` | 占位 | 阶段 C 已跳过 | **禁止对 \(x_j\) 做 Metropolis**；G5 不要走这条对 \(x\) 的退火 |
 | `refine.py` | \((A_V,v,\sigma)\) 局部加密 + Nelder-Mead；每点 NNLS | G5 有 | 禁止对 \(x_j\) 退火 |
+| `regularize.py` | 多模板非负正则 / 年龄箱（仍 NNLS） | H1 | 禁止改成对 \(x_j\) 退火 |
+| `errors.py` | χ² 切片 / 重复拟合粗误差 | H2 | 不是协方差、不是官方误差公式 |
 | `preprocess.py` | 静止系、空气/真空、LSF、线 mask、估误差 | 有 | 不要把 \(z\)/FWHM 当拟合参数 |
 | `products.py` | \(M/L\) 后处理；有元数据时的光加权量 | 有 | 无 \(M/L\) 禁止输出 \(\mu_j\) |
 | `simulate.py` | 合成谱 | 有 | G 测试继续用 |
@@ -203,14 +205,14 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 
 ### 阶段 H — 研究可用（G 全部完成之后）
 
-默认关；每项先改本文对应小节和 PROGRESS 验收再写代码。
+默认关；每项先改本文对应小节和 PROGRESS 验收再写代码。一次一个小段。
 
-- [ ] 多模板非负正则或按年龄箱
-- [ ] χ² 切片或重复拟合的粗误差
-- [ ] LOSVD 垫边 / 更密速度采样；同一 \((v,\sigma)\) 预计算设计矩阵
-- [ ] 可选 AYV
-- [ ] 可选 `dust_extinction`
-- [ ] 自己的 npz/json 存盘（不是 Fortran `.out`）
+- [x] **H1** 多模板非负正则或按年龄箱（仍 NNLS；需 `template_ages`）
+- [x] **H2** χ² 切片或重复拟合的粗误差
+- [x] **H3** LOSVD 垫边 / 更密速度采样；同一 \((v,\sigma)\) 预计算设计矩阵
+- [x] **H4** 可选 AYV（年轻旗标 + 有/无 AYV 两套真值）
+- [x] **H5** 可选 `dust_extinction`
+- [x] **H6** 自己的 npz/json 存盘（不是 Fortran `.out`）
 
 ---
 
@@ -226,6 +228,9 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 G2–G4 额外：**先做错预处理 → 参数应偏；做对 → 收回。**  
 G6：测试必须自带假 \(M/L\)（或假年龄/Z）；无元数据必须 raise。  
 G5：与 B3 同一类离网真值，加密后更近或 χ² 不差于粗网格。
+
+H1：简并多模板时，未正则箱内分量不平分；年龄箱或平滑后箱内光和收回，且 \(x_j\ge 0\)。  
+H4：年轻模板真值带 \(A_{YV}\) 时，打开 `fit_ayv` 能收回；关掉则 χ² 更大或 \(A_V\) 偏。
 
 禁止：用和拟合器同一套近似去「验收自己」却不经过 `fit_spectrum`；禁止只画图不 assert；禁止用真巡天谱当单元测试绿灯。
 
@@ -252,8 +257,25 @@ G5：与 B3 同一类离网真值，加密后更近或 χ² 不差于粗网格�
 - `fwhm_data`, `fwhm_template`（G3；单位 **Å** 仪器 FWHM；仅当数据更宽时展宽模板）
 - `estimate_error: bool`（G4；缺 \(e_\lambda\) 时才用）
 - `refine_kinematics: bool`（G5）
+- `regularize_x: str | None`（H1；`None` / `smooth_age` / `age_bins`；默认 `None`）
+- `regularize_strength: float`（H1；仅 `smooth_age`）
+- `age_bin_edges: tuple[float, ...] | None`（H1；仅 `age_bins`，也可按年龄唯一值自动分箱）
+- `error_method: str | None`（H2；`None` / `chi2_slice` / `repeat`）
+- `n_repeat: int`（H2；仅 `repeat`）
+- `repeat_seed: int`（H2）
+- `pad_losvd: bool`（H3；默认关）
+- `losvd_oversample: int`（H3；均匀 lnλ 加密倍数，默认 1）
+- `fit_ayv: bool`（H4；默认关）
+- `a_yv_bounds`, `a_yv_step`（H4）
+- `law` 可取 `dust:<Model>`（H5；例如 `dust:F99`）。未装 `dust_extinction` 时明确报错。默认仍是自带 CCM / CAL / Gordon。
 
-**阶段 G 预告：** 无。G 字段已全部进白名单。
+`fit_spectrum(..., template_ages=)` 不是 `FitConfig` 字段：年龄是模板元数据，长度必须等于成分数。未开正则时忽略。
+
+`fit_spectrum(..., young_flags=)` 也不是 `FitConfig` 字段：年轻旗标是模板元数据，长度必须等于成分数。未开 `fit_ayv` 时忽略。
+
+`save_fit_result` / `load_fit_result`（H6）也不是 `FitConfig` 字段：npz 或 json；默认不自动写盘；不是 Fortran `.out`。
+
+**阶段 H 预告：** 无（H1–H6 已实现）。
 
 不要加：N_chains、Fortran 同名配置几十条、学习率、CNN 权重路径、`anneal_x`、`fit_emission`、`search_redshift`。
 
@@ -279,7 +301,7 @@ G5：与 B3 同一类离网真值，加密后更近或 χ² 不差于粗网格�
 
 ## 9. 写 1.x 时仍适用的提醒
 
-1. **一次只做一件。** 阶段 G 已完成。不要同时改 `easyppxf`、不要开 H、不要为「更像 Fortran」加开关。
+1. **一次只做一件。** 阶段 H 已完成。不要同时改 `easyppxf`、不要为「更像 Fortran」加开关。
 2. **两个 `fit_spectrum` 不要混。** 主业是 `from starlightpy import fit_spectrum`；pPXF 请 `import easyppxf` 并起别的名字。
 3. **先合成谱，不要一上来拟合真星系。** 真谱有红移、真空/空气、仪器展宽、发射线；没做 G2–G3 时锅会甩给拟合器。不要往仓库塞 BC03。
 4. **观测和模板必须已经在同一套波长上**（或先走 G 的预处理再 `resample_to`）。`build_model` 不负责插值。
@@ -295,7 +317,7 @@ G5：与 B3 同一类离网真值，加密后更近或 χ² 不差于粗网格�
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。**阶段 G（1.x）已完成。** 不要自动开始 H；H 默认关。
+见 [docs/PROGRESS.md](PROGRESS.md)。阶段 H（H1–H6）已完成。不要开 §2 永不做的项，也不要再长 `easyppxf`。
 
 ---
 

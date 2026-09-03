@@ -28,3 +28,14 @@ class FitConfig:
     fwhm_template: Optional[float] = None
     estimate_error: bool = False
     refine_kinematics: bool = False
+    regularize_x: Optional[str] = None
+    regularize_strength: float = 1.0
+    age_bin_edges: Optional[Tuple[float, ...]] = None
+    error_method: Optional[str] = None
+    n_repeat: int = 8
+    repeat_seed: int = 0
+    pad_losvd: bool = False
+    losvd_oversample: int = 1
+    fit_ayv: bool = False
+    a_yv_bounds: Tuple[float, float] = (0.0, 1.5)
+    a_yv_step: float = 0.2

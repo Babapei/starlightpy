@@ -38,14 +38,35 @@ def reddening_factor(q_lambda: ArrayLike, a_v: float, q_lambda0: float) -> NDArr
     return 10.0 ** (-0.4 * (q - q_lambda0) * a_v)
 
 
+def reddening_columns(
+    q_lambda: ArrayLike,
+    a_v: float,
+    q_lambda0: float,
+    n_comp: int,
+    a_yv: float = 0.0,
+    young_flags: Optional[ArrayLike] = None,
+) -> NDArray[np.float64]:
+    """Per-template reddening. Young templates get A_V + A_YV when flagged."""
+    q = np.asarray(q_lambda, dtype=float)
+    if young_flags is None or abs(float(a_yv)) < 1e-12:
+        return reddening_factor(q, a_v, q_lambda0)[:, None]
+    young = np.asarray(young_flags, dtype=float)
+    if young.shape != (n_comp,):
+        raise ValueError("young_flags must have one value per template.")
+    av_j = float(a_v) + float(a_yv) * young
+    return 10.0 ** (-0.4 * (q[:, None] - q_lambda0) * av_j[None, :])
+
+
 def build_model(
     x_j: ArrayLike,
     base_matrix: ArrayLike,
     extinction_curve: ArrayLike,
     a_v: float,
     q_lambda0: Optional[float] = None,
+    a_yv: float = 0.0,
+    young_flags: Optional[ArrayLike] = None,
 ) -> NDArray[np.float64]:
-    """M_λ = Σ_j x_j b_{λ,j} 10^{-0.4 (q_λ - q_λ0) A_V} (no kinematics)."""
+    """M_λ = Σ_j x_j b_{λ,j} r_{λ,j}(A_V, A_YV) (no kinematics)."""
     bases = np.asarray(base_matrix, dtype=float)
     x = np.asarray(x_j, dtype=float)
     q = np.asarray(extinction_curve, dtype=float)
@@ -56,5 +77,5 @@ def build_model(
         raise ValueError("extinction_curve must match the wavelength axis of base_matrix.")
     if q_lambda0 is None:
         q_lambda0 = float(np.median(q))
-    factor = reddening_factor(q, a_v, q_lambda0)
-    return (bases * factor[:, None]) @ x
+    rmat = reddening_columns(q, a_v, q_lambda0, n_comp, a_yv=a_yv, young_flags=young_flags)
+    return (bases * rmat) @ x

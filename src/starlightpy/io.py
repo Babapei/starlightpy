@@ -1,10 +1,12 @@
-"""STARLIGHT-style ASCII readers. Use ``resample_to`` if grids differ; ``fit_spectrum`` does not interpolate."""
+"""STARLIGHT-style ASCII readers and FitResult npz/json save (not Fortran .out)."""
 
 from __future__ import annotations
 
 import gzip
+import json
+from dataclasses import asdict, fields
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Any, Iterator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -305,3 +307,157 @@ def load_sdss_fits(
         err = np.full_like(flux, max(0.01 * median, 1e-8))
         good = np.isfinite(flux)
         return wave, flux, err, good
+
+
+_RESULT_FORMAT = "starlightpy-fitresult"
+_RESULT_VERSION = 1
+_CONFIG_TUPLE_FIELDS = {
+    "norm_window",
+    "a_v_bounds",
+    "v_bounds",
+    "sigma_bounds",
+    "a_yv_bounds",
+    "age_bin_edges",
+}
+
+
+def _jsonable(obj: Any) -> Any:
+    if obj is None:
+        return None
+    if isinstance(obj, dict):
+        return {str(key): _jsonable(value) for key, value in obj.items()}
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, (np.floating, np.integer, np.bool_)):
+        return obj.item()
+    if isinstance(obj, (list, tuple)):
+        return [_jsonable(item) for item in obj]
+    return obj
+
+
+def _errors_from_json(data: Any) -> Optional[dict]:
+    if data is None:
+        return None
+    out: dict = {}
+    for key, value in data.items():
+        if isinstance(value, list):
+            out[key] = np.asarray(value, dtype=float)
+        else:
+            out[key] = value
+    return out
+
+
+def _config_to_json(config: Any) -> Optional[dict]:
+    if config is None:
+        return None
+    return _jsonable(asdict(config))
+
+
+def _config_from_json(data: Any):
+    from .config import FitConfig
+
+    if data is None:
+        return None
+    allowed = {item.name for item in fields(FitConfig)}
+    kwargs = {}
+    for key, value in data.items():
+        if key not in allowed:
+            continue
+        if key in _CONFIG_TUPLE_FIELDS and value is not None:
+            kwargs[key] = tuple(value)
+        else:
+            kwargs[key] = value
+    return FitConfig(**kwargs)
+
+
+def _result_to_payload(result: Any) -> dict:
+    return {
+        "format": _RESULT_FORMAT,
+        "version": _RESULT_VERSION,
+        "x": np.asarray(result.x, dtype=float).tolist(),
+        "x_fraction": np.asarray(result.x_fraction, dtype=float).tolist(),
+        "a_v": float(result.a_v),
+        "a_yv": float(result.a_yv),
+        "v0_kms": float(result.v0_kms),
+        "sigma_kms": float(result.sigma_kms),
+        "model": np.asarray(result.model, dtype=float).tolist(),
+        "chi2": float(result.chi2),
+        "chi2_reduced": float(result.chi2_reduced),
+        "n_good": int(result.n_good),
+        "a_v_grid": np.asarray(result.a_v_grid, dtype=float).tolist(),
+        "chi2_grid": np.asarray(result.chi2_grid, dtype=float).tolist(),
+        "n_clipped": int(result.n_clipped),
+        "good": None if result.good is None else np.asarray(result.good, dtype=bool).tolist(),
+        "obs_scale": float(result.obs_scale),
+        "dropped": None
+        if result.dropped is None
+        else np.asarray(result.dropped, dtype=bool).tolist(),
+        "errors": _jsonable(result.errors),
+        "config": _config_to_json(result.config),
+    }
+
+
+def _payload_to_result(data: dict):
+    from .fit import FitResult
+
+    if data.get("format") != _RESULT_FORMAT:
+        raise ValueError("Not a starlightpy FitResult file.")
+    good = data.get("good")
+    dropped = data.get("dropped")
+    return FitResult(
+        x=np.asarray(data["x"], dtype=float),
+        x_fraction=np.asarray(data["x_fraction"], dtype=float),
+        a_v=float(data["a_v"]),
+        v0_kms=float(data["v0_kms"]),
+        sigma_kms=float(data["sigma_kms"]),
+        model=np.asarray(data["model"], dtype=float),
+        chi2=float(data["chi2"]),
+        chi2_reduced=float(data["chi2_reduced"]),
+        n_good=int(data["n_good"]),
+        a_v_grid=np.asarray(data["a_v_grid"], dtype=float),
+        chi2_grid=np.asarray(data["chi2_grid"], dtype=float),
+        n_clipped=int(data.get("n_clipped", 0)),
+        good=None if good is None else np.asarray(good, dtype=bool),
+        obs_scale=float(data.get("obs_scale", 1.0)),
+        config=_config_from_json(data.get("config")),
+        dropped=None if dropped is None else np.asarray(dropped, dtype=bool),
+        errors=_errors_from_json(data.get("errors")),
+        a_yv=float(data.get("a_yv", 0.0)),
+    )
+
+
+def save_fit_result(path: PathLike, result: Any) -> None:
+    """Write a FitResult to ``.npz`` or ``.json``. Fortran ``.out`` is not supported."""
+    dest = Path(path)
+    suffix = dest.suffix.lower()
+    payload = _result_to_payload(result)
+    if suffix == ".json":
+        dest.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        return
+    if suffix == ".npz":
+        np.savez_compressed(
+            dest,
+            payload=np.frombuffer(json.dumps(payload).encode("utf-8"), dtype=np.uint8),
+        )
+        return
+    raise ValueError(
+        "save_fit_result only writes .npz or .json; Fortran .out is not a product."
+    )
+
+
+def load_fit_result(path: PathLike):
+    """Read a FitResult saved by ``save_fit_result``."""
+    src = Path(path)
+    suffix = src.suffix.lower()
+    if suffix == ".json":
+        data = json.loads(src.read_text(encoding="utf-8"))
+        return _payload_to_result(data)
+    if suffix == ".npz":
+        with np.load(src, allow_pickle=False) as npz:
+            if "payload" not in npz:
+                raise ValueError("Not a starlightpy FitResult file.")
+            data = json.loads(npz["payload"].tobytes().decode("utf-8"))
+        return _payload_to_result(data)
+    raise ValueError(
+        "load_fit_result only reads .npz or .json; Fortran .out is not a product."
+    )
