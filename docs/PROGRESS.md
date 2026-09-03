@@ -6,9 +6,9 @@
 
 | 项 | 值 |
 | --- | --- |
-| 阶段 | J（存盘可画图） |
-| 小段 | **J3 已完成**；阶段 J（J1–J3）全部完成 |
-| 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、再长 `easyppxf`、改 `pad_losvd` 默认、未写验收就开下一 J 项 |
+| 阶段 | J 已完成；当前是真实使用补丁 U（不是新物理阶段） |
+| 小段 | **U1–U3 进行中**：README 文件入口、`easyppxf` 同波长边界、合成谱两条静止系路径 |
+| 不要做 | 对 \(x_j\) 退火、搜索宇宙学 \(z\)、`backend=`、用真星系当测试真理、把 `easyppxf` 做成对等产品、改 `pad_losvd` 默认、未写验收就开新阶段 |
 
 ## 小段清单
 
@@ -55,6 +55,12 @@
 - [x] **J1** `FitResult.flux`
 - [x] J2 存盘读回 `flux`
 - [x] J3 README 画图示例
+
+### 真实使用补丁 U（不是新阶段）
+
+- [ ] **U1** README 从文件到拟合 / `redshift=` 约定
+- [ ] **U2** `easyppxf` 同波长不再 pPXF 断言崩溃
+- [ ] **U3** 合成谱：`redshift=` 与 `to_rest_frame` 两条路径收回
 
 ## G1 验收（先写再做，2026-09-02）
 
@@ -340,6 +346,40 @@ README 增加最小正确用法（`fit_spectrum` + 预处理开关）和真谱�
 | README | 存盘示例 | 出现 `flux` 与 `model`，表明可画观测 vs 模型 |
 
 **J3 结果（2026-09-03）：通过。** README 存盘示例写出 `loaded.wavelength` / `loaded.flux` / `loaded.model`。
+
+## U1 验收（先写再做，2026-09-03）
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| 文件入口 | README | 出现 `load_spectrum` 或 `load_sdss_fits`，以及 `to_rest_frame` |
+| 约定 | README | 写明先静止系再 `redshift=0`，或 `redshift=` 时 wave/bases 已是静止系网格 |
+| 禁止 | — | 不把真星系当用法真理、不新增长文 |
+
+未开始 U1 正文。
+
+## U2 验收（先写再做，2026-09-03）
+
+同一套线性波长调用 `easyppxf.fit_spectrum`（pPXF 默认需要模板比星系更宽约 ±2900 km/s）。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| 同波长 | 观测与模板同一 `wave`，`mask_emission=False` | 不抛 `AssertionError`；返回有限的 `velocity`/`sigma`/`bestfit` |
+| 过短 | 模板只覆盖星系中段一小段 | `ValueError`，消息含 wavelength 或 2900 / km/s |
+| 回归 | 现有「模板更宽」测试 | 仍绿 |
+
+未开始 U2 代码。
+
+## U3 验收（先写再做，2026-09-03）
+
+合成吸收线，真值 \(x=(0.50,0.35,0.15)\)，\(A_V=0.30\)，\(v=80\)，\(\sigma=130\)。测试网格与 G5/B3 同类缩小网格。走 `fit_spectrum`。
+
+| 路径 | 做法 | 断言 |
+| --- | --- | --- |
+| G2 `redshift=` | 观测系 \(F_\lambda\) 采样到静止系网格，`redshift=z` | \(|\Delta v|\le 50\)，\(|\Delta\sigma|\le 50\)，\(|\Delta A_V|\le 0.10\)，\(x\) atol 0.12 |
+| `to_rest_frame` | 观测系波长/流量先 `to_rest_frame` + `resample_to`，`redshift=0` | 同上 |
+| 禁止 | — | 不用真巡天谱 |
+
+未开始 U3 代码。
 
 ## B2 验收（历史，2026-09-01）
 
