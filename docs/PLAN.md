@@ -240,9 +240,9 @@ I 完成之后只补这一处：读回的 `FitResult` 要能单独对齐画「�
 
 J 完成之后按 README 做真实调用，并用公开 SDSS FITS 测读入（**不断言 SFH；禁止把真巡天谱写进 pytest 真理**）。只修实际卡点，不新增长 `FitConfig`，不改 `pad_losvd` 默认，不再把 `easyppxf` 做成对等产品。
 
-- [ ] **U1** README 补「从文件到拟合」一小段：`.cxt` / `load_sdss_fits`；loader 不返回宇宙学 \(z\)；更不易错的路径是 `to_rest_frame` + `resample_to` 之后 `redshift=0`；`FitConfig.redshift=` 的前提是 `wave`/`bases` 已是静止系真空网格、`flux` 仍是观测系 \(F_\lambda\) 采样到该网格。FITS `good` 与发射线 mask 要 AND。`clip_nsigma` 不是发射线处理。仍禁止第三份架构文。
-- [ ] **U2** `easyppxf.fit_spectrum`：观测与模板同一波长时，不要把 pPXF 因默认速度边界（约 ±2900 km/s 需要模板更宽）抛出的 `AssertionError` 交给用户。裁剪 `goodpixels` 到模板能覆盖的范围；重叠太短则 `ValueError` 说明原因。这是现有入口的样板错误，不是新拟合功能。
-- [ ] **U3** 合成谱测试：G2 的 `redshift=` 路径与显式 `to_rest_frame` 路径都能收回少模板 \(x,A_V,v,\sigma\)。禁止用真巡天谱当 assert 真理。
+- [x] **U1** README 补「从文件到拟合」一小段：`.cxt` / `load_sdss_fits`；loader 不返回宇宙学 \(z\)；更不易错的路径是 `to_rest_frame` + `resample_to` 之后 `redshift=0`；`FitConfig.redshift=` 的前提是 `wave`/`bases` 已是静止系真空网格、`flux` 仍是观测系 \(F_\lambda\) 采样到该网格。FITS `good` 与发射线 mask 要 AND。`clip_nsigma` 不是发射线处理。仍禁止第三份架构文。
+- [x] **U2** `easyppxf.fit_spectrum`：观测与模板同一波长时，不要把 pPXF 因默认速度边界（约 ±2900 km/s 需要模板更宽）抛出的 `AssertionError` 交给用户。裁剪 `goodpixels` 到模板能覆盖的范围；重叠太短则 `ValueError` 说明原因。这是现有入口的样板错误，不是新拟合功能。
+- [x] **U3** 合成谱测试：G2 的 `redshift=` 路径与显式 `to_rest_frame` 路径都能收回少模板 \(x,A_V,v,\sigma\)。禁止用真巡天谱当 assert 真理。
 
 ---
 
@@ -358,7 +358,7 @@ U3：两条静止系路径走 `fit_spectrum`，收回容差与 B2 同级（\(|\D
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。阶段 J（J1–J3）已完成。当前是真实使用补丁 U1–U3（文档 + 合成验收 + `easyppxf` 边界），不是阶段 K，也不要开 §2 永不做的项。
+见 [docs/PROGRESS.md](PROGRESS.md)。阶段 J（J1–J3）与真实使用补丁 U1–U3 已完成。不要开 §2 永不做的项，也不要把 `easyppxf` 做成对等产品。
 
 ---
 
