@@ -22,6 +22,44 @@ CITE = (
     "Cappellari & Emsellem (2004, PASP, 116, 138)"
 )
 
+# pPXF ``set_lam_input`` default velocity bounds when ``bounds`` is omitted.
+_C_KMS = 299792.458
+_PPXF_DEFAULT_V_MARGIN_KMS = 2900.0
+
+
+def _goodpixels_within_ppxf_template_margin(
+    lam_gal: NDArray[np.float64],
+    lam_temp: NDArray[np.float64],
+    goodpixels: Optional[NDArray[np.int_]],
+    v_margin_kms: float = _PPXF_DEFAULT_V_MARGIN_KMS,
+) -> NDArray[np.int_]:
+    """Keep galaxy pixels pPXF can cover with the default ±2900 km/s bounds.
+
+    Passing ``lam`` and ``lam_temp`` makes pPXF require extra template
+    wavelength coverage. Same-grid calls used to hit an ``AssertionError``.
+    """
+    factor = float(np.exp(v_margin_kms / _C_KMS))
+    lo = float(np.min(lam_temp)) * factor
+    hi = float(np.max(lam_temp)) / factor
+    if (not np.isfinite(lo)) or (not np.isfinite(hi)) or lo >= hi:
+        raise ValueError(
+            "templates wavelength range is too short for pPXF "
+            f"(need about ±{int(v_margin_kms)} km/s extra coverage beyond the galaxy)."
+        )
+    cover = np.flatnonzero((lam_gal > lo) & (lam_gal < hi))
+    if goodpixels is None:
+        selected = cover
+    else:
+        selected = np.intersect1d(np.asarray(goodpixels, dtype=int), cover)
+    selected = np.asarray(np.sort(selected), dtype=int)
+    if selected.size < 10:
+        raise ValueError(
+            "Too few galaxy pixels remain after leaving the pPXF velocity margin "
+            f"(about ±{int(v_margin_kms)} km/s). "
+            "Give templates a wider wavelength range than the galaxy."
+        )
+    return selected
+
 
 @dataclass
 class FitResult:
@@ -115,6 +153,7 @@ def fit_spectrum(
     goodpixels = None
     if mask_emission:
         goodpixels = determine_goodpixels(ln_lam, [lam_temp.min(), lam_temp.max()])
+    goodpixels = _goodpixels_within_ppxf_template_margin(lam_gal, lam_temp, goodpixels)
 
     # When both wavelength vectors are passed, pPXF forbids vsyst.
     pp = ppxf(

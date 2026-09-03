@@ -43,6 +43,36 @@ age_L = light_weighted_age(result.x_fraction, ages)
 
 没有误差谱时才设 `estimate_error=True`（会警告这不是真 χ²）。网格不同先 `resample_to`，不要假设 `build_model` 会插值。
 
+## 从文件到拟合
+
+更不易错：先把观测移到静止系，再与模板采到同一网格，然后 `redshift=0`。`load_sdss_fits` 只返回波长/流量/误差/像素 mask，**不返回宇宙学 \(z\)**（SDSS 的 \(z\) 在 SPECOBJ 等元数据里）。
+
+```python
+from starlightpy import (
+    FitConfig,
+    apply_mask,
+    fit_spectrum,
+    load_sdss_fits,
+    load_spectrum,
+    optical_emission_mask_regions,
+    resample_to,
+    to_rest_frame,
+)
+
+# .cxt：wave, flux, error, flags = load_spectrum("galaxy.cxt")
+wave_obs, flux_obs, err_obs, good_obs = load_sdss_fits("spec.fits")
+wave_rest, flux_rest, err_rest = to_rest_frame(wave_obs, flux_obs, z, err_obs)
+flux = resample_to(wave_rest, flux_rest, wave)   # wave 与 bases 同一静止系真空网格
+error = resample_to(wave_rest, err_rest, wave)
+good = resample_to(wave_rest, good_obs.astype(float), wave) > 0.5
+good &= apply_mask(wave, optical_emission_mask_regions())
+result = fit_spectrum(wave, flux, error, bases, mask=good, config=FitConfig(redshift=0.0))
+```
+
+`FitConfig.redshift=` 只在这种约定下使用：`wave` / `bases` **已经是**静止系真空网格，`flux` 仍是观测系 \(F_\lambda\)、只是已经采样到这些波长数字上。不要把 SDSS 的 \(\lambda_\mathrm{obs}\) 既拿去建模板、又设 `redshift=z`——线心会错一截。
+
+发射线用 mask，不要靠 `clip_nsigma`。clip 是拟合后的离群点；模型很差时会误删大量像素。光学 mask 含 Hβ/Hα 等，年老星族的吸收线也会被挡住，需要可改表。模板请自带（仓库不捆绑 SSP）。
+
 ## 可选（默认关）
 
 这些开关默认都不开。打开前请看 [docs/PLAN.md](docs/PLAN.md)。
@@ -77,9 +107,9 @@ pp = fit_ppxf(wave, flux, templates, template_wave, error=err)
 print(pp.velocity, pp.sigma)
 ```
 
-`easyppxf.load_sdss_fits` 只读一维谱；拟合请引用 Cappellari，不要把本包装成一种新方法。SDSS FITS 需要 `pip install astropy`（或 `.[fits]` / `.[dev]`）。
+`easyppxf.load_sdss_fits` 只读一维谱；拟合请引用 Cappellari，不要把本包装成一种新方法。SDSS FITS 需要 `pip install astropy`（或 `.[fits]` / `.[dev]`）。模板波长必须比星系谱更宽（pPXF 默认速度边界约 ±2900 km/s）；同一网格时包装器会丢掉两端不够的像素，太短则报错。
 
-当前：**阶段 I 与阶段 J 完成；版本 1.0.0。** 见 [docs/PLAN.md](docs/PLAN.md) 与 [docs/PROGRESS.md](docs/PROGRESS.md)。
+当前：**阶段 I 与阶段 J 完成；真实使用补丁见 [docs/PLAN.md](docs/PLAN.md)。版本 1.0.0。** 见 [docs/PLAN.md](docs/PLAN.md) 与 [docs/PROGRESS.md](docs/PROGRESS.md)。
 
 算法出处：Cid Fernandes et al. 2005（STARLIGHT）。`easyppxf` 用 pPXF 时请引用 Cappellari。本库是 MIT 许可的软件，不是那两篇论文的官方实现。
 
