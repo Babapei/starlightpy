@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-03（阶段 J 进行中：验收已写；下一刀 J1）
+最后更新：2026-09-03（J1 完成；下一刀 J2）
 
 ---
 
@@ -232,7 +232,7 @@ H 全部完成之后。不新增 `FitConfig` 开关，不改 `pad_losvd` 默认�
 
 I 完成之后只补这一处：读回的 `FitResult` 要能单独对齐画「观测 vs 模型」。不新增 `FitConfig` 开关，不改 `pad_losvd` 默认，不用真星系当测试真理，不再长 `easyppxf`。
 
-- [ ] **J1** `FitResult.flux`：拟合网格上的观测流量，与 `model` 同长度、同单位（已知 \(z\) / 空气转换之后，不是归一后的内部数组）
+- [x] **J1** `FitResult.flux`：拟合网格上的观测流量，与 `model` 同长度、同单位（已知 \(z\) / 空气转换之后，不是归一后的内部数组）
 - [ ] **J2** 存盘 payload 写入 `flux`（version 3）；缺该字段的旧文件加载为 `None`
 - [ ] **J3** README 存盘示例写出可用 `wavelength` / `flux` / `model` 画图
 
@@ -310,7 +310,6 @@ J1：`FitResult.flux` 与传入（或对齐后的）观测流量同单位、与 
 
 **阶段 J 预告（实现对应小段时才写进代码）：**
 
-- J1：`FitResult.flux`
 - J2：payload `version` 升到 3；仍读 v1/v2
 
 不要加：N_chains、Fortran 同名配置几十条、学习率、CNN 权重路径、`anneal_x`、`fit_emission`、`search_redshift`。
@@ -353,7 +352,7 @@ J1：`FitResult.flux` 与传入（或对齐后的）观测流量同单位、与 
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。当前小段是 **J1**（`FitResult.flux`）。未完成 J1 不要做 J2。不要开 §2 永不做的项，也不要再长 `easyppxf`。
+见 [docs/PROGRESS.md](PROGRESS.md)。当前小段是 **J2**（存盘读回 `flux`）。未完成 J2 不要做 J3。不要开 §2 永不做的项，也不要再长 `easyppxf`。
 
 ---
 
