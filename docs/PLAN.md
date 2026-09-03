@@ -2,7 +2,7 @@
 
 本文是本仓库的开发合同。**以本文为准，不以聊天记录为准。** 以后加功能前先对这里；和本文冲突的想法默认不做。聊天里说的若要生效，必须改成本文的一节。
 
-最后更新：2026-09-02（阶段 H 完成：H1–H6）
+最后更新：2026-09-03（阶段 I 完成：I1–I5）
 
 ---
 
@@ -70,7 +70,7 @@ M_\lambda = \left(\sum_j x_j\, b_{j,\lambda}\, r_\lambda(A_V)\right) \otimes G(v
 - 可选 AYV（模板要有年轻旗标 + 有/无 AYV 两套真值）
 - 可选对接 `dust_extinction`；自己的 npz/json 存盘（**不是**官方 `.out`）
 
-G（1.x）已完成。阶段 H（H1–H6）已完成；各项默认关。
+G（1.x）已完成。阶段 H（H1–H6）已完成；各项默认关。阶段 I 是 1.0 工作流（结果自洽、存盘、CI、版本），不是新物理开关。
 
 ### 永不做（不是「以后可选」）
 
@@ -101,11 +101,11 @@ G（1.x）已完成。阶段 H（H1–H6）已完成；各项默认关。
 | 文件 | 职责 | 现在 | 以后 |
 | --- | --- | --- | --- |
 | `config.py` | `FitConfig` 白名单 | 有 v0.1 字段 | G 预告字段见 §7；不要加退火温度表 |
-| `io.py` | `.cxt` / mask / base / gzip / FITS / `iter_ascii_spectra` / `resample_to`；H6 npz/json 存盘 | 有 | 不要作业调度；不要 Fortran `.out` |
+| `io.py` | `.cxt` / mask / base / gzip / FITS / `iter_ascii_spectra` / `resample_to`；npz/json 存盘（含波长与误差） | 有 | 不要作业调度；不要 Fortran `.out` |
 | `extinction.py` | \(q_\lambda=A_\lambda/A_V\)：CCM、CAL、Gordon；H5 可选 `dust:<Model>` | 有 | — |
 | `model.py` | 红化后的线性组合；H4 可选按年轻旗标加 \(A_{YV}\) | 有 | — |
 | `kinematics.py` | 均匀 lnλ 上的高斯 LOSVD | 有 | H3：垫边/密采样/设计矩阵预计算 |
-| `fit.py` | NNLS；\(A_V\) 与 \(v,\sigma\) 网格；clip/EX0；`FitResult` | 有 | G1 字段已加；G5 局部加密（`refine.py`） |
+| `fit.py` | NNLS；\(A_V\) 与 \(v,\sigma\) 网格；clip/EX0；`FitResult`（含波长与拟合误差） | 有 | — |
 | `clip.py` | NSIGMA clip + EX0 | 有 | — |
 | `optimize.py` | 占位 | 阶段 C 已跳过 | **禁止对 \(x_j\) 做 Metropolis**；G5 不要走这条对 \(x\) 的退火 |
 | `refine.py` | \((A_V,v,\sigma)\) 局部加密 + Nelder-Mead；每点 NNLS | G5 有 | 禁止对 \(x_j\) 退火 |
@@ -137,7 +137,7 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 8. **不要加 pPXF 那种加性 Legendre 多项式。**
 9. **合成运动学测试必须用带吸收线的模板**，不要用纯 Planck/黑体连续谱。
 10. **仪器分辨率与 \(z\)、发射线、真空/空气是拟合前管道**，不要把 FWHM 或 \(z\) 塞进非线性网格当未知数。合成测试里模板与假观测一致即可；真数据先做 G3。
-11. **卷积边缘**（谱两端）当前不可信。垫边与更密速度采样放阶段 H，不要在 G 里假装已经处理好。
+11. **卷积边缘**（谱两端）：默认 `pad_losvd=False` 时两端仍不可信。H3 已提供垫边与 lnλ 加密，须显式打开；**不要改默认值**。
 
 ---
 
@@ -216,6 +216,18 @@ from starlightpy import fit_spectrum, FitResult, FitConfig, build_model
 
 ---
 
+### 阶段 I — 可交付的 1.0（工作流，不是新物理）
+
+H 全部完成之后。不新增 `FitConfig` 开关，不改 `pad_losvd` 默认，不把真星系当单元测试真理，不再长 `easyppxf`。一次一个小段；先改本文和 PROGRESS 验收再编码。
+
+- [x] **I1** `FitResult` 带上拟合用的波长，以及进入 χ² 的误差（观测流量单位，与 `model` 一致）
+- [x] **I2** `save_fit_result` / `load_fit_result` 写入并读回上述字段；旧 payload 仍能加载
+- [x] **I3** 合成谱端到端：读入 → mask → `fit_spectrum` → 光加权产品 → 存盘 → 读回
+- [x] **I4** pytest CI；版本号 `1.0.0`
+- [x] **I5** README 一小段可选（默认关）开关与存盘；仍禁止第三份架构文
+
+---
+
 ## 6. 每阶段怎么验收（防止「看起来能跑」）
 
 合成流程（拟合器本身）：
@@ -230,7 +242,9 @@ G6：测试必须自带假 \(M/L\)（或假年龄/Z）；无元数据必须 rais
 G5：与 B3 同一类离网真值，加密后更近或 χ² 不差于粗网格。
 
 H1：简并多模板时，未正则箱内分量不平分；年龄箱或平滑后箱内光和收回，且 \(x_j\ge 0\)。  
-H4：年轻模板真值带 \(A_{YV}\) 时，打开 `fit_ayv` 能收回；关掉则 χ² 更大或 \(A_V\) 偏。
+H4：年轻模板真值带 \(A_{YV}\) 时，打开 `fit_ayv` 能收回；关掉则 χ² 更大或 \(A_V\) 偏。  
+I1：`FitResult.wavelength` 与输入网格一致；`error` 与 `model` 同单位、同长度。  
+I3：公开读入 + 预处理 + fit + 产品 + 存盘走一遍，合成谱收回；不用真巡天谱当真理。
 
 禁止：用和拟合器同一套近似去「验收自己」却不经过 `fit_spectrum`；禁止只画图不 assert；禁止用真巡天谱当单元测试绿灯。
 
@@ -275,7 +289,9 @@ H4：年轻模板真值带 \(A_{YV}\) 时，打开 `fit_ayv` 能收回；关掉�
 
 `save_fit_result` / `load_fit_result`（H6）也不是 `FitConfig` 字段：npz 或 json；默认不自动写盘；不是 Fortran `.out`。
 
-**阶段 H 预告：** 无（H1–H6 已实现）。
+`FitResult.wavelength` / `FitResult.error`（I1）也不是 `FitConfig` 字段：波长是拟合用的网格；误差是进入 χ² 的那份，单位与返回的 `model` 相同。旧存盘缺这两项时加载为 `None`。
+
+**阶段 I 预告：** 无（I1–I5 已实现）。
 
 不要加：N_chains、Fortran 同名配置几十条、学习率、CNN 权重路径、`anneal_x`、`fit_emission`、`search_redshift`。
 
@@ -301,7 +317,7 @@ H4：年轻模板真值带 \(A_{YV}\) 时，打开 `fit_ayv` 能收回；关掉�
 
 ## 9. 写 1.x 时仍适用的提醒
 
-1. **一次只做一件。** 阶段 H 已完成。不要同时改 `easyppxf`、不要为「更像 Fortran」加开关。
+1. **一次只做一件。** 阶段 I 已完成。不要同时改 `easyppxf`、不要为「更像 Fortran」加开关、不要改 `pad_losvd` 默认。
 2. **两个 `fit_spectrum` 不要混。** 主业是 `from starlightpy import fit_spectrum`；pPXF 请 `import easyppxf` 并起别的名字。
 3. **先合成谱，不要一上来拟合真星系。** 真谱有红移、真空/空气、仪器展宽、发射线；没做 G2–G3 时锅会甩给拟合器。不要往仓库塞 BC03。
 4. **观测和模板必须已经在同一套波长上**（或先走 G 的预处理再 `resample_to`）。`build_model` 不负责插值。
@@ -317,7 +333,7 @@ H4：年轻模板真值带 \(A_{YV}\) 时，打开 `fit_ayv` 能收回；关掉�
 
 ## 10. 当前下一步
 
-见 [docs/PROGRESS.md](PROGRESS.md)。阶段 H（H1–H6）已完成。不要开 §2 永不做的项，也不要再长 `easyppxf`。
+见 [docs/PROGRESS.md](PROGRESS.md)。阶段 I（I1–I5）已完成。不要开 §2 永不做的项，也不要再长 `easyppxf`。
 
 ---
 
@@ -331,7 +347,7 @@ H4：年轻模板真值带 \(A_{YV}\) 时，打开 `fit_ayv` 能收回；关掉�
 
 1. 对应测试绿（合成谱走公开 API + `assert`）。
 2. 本文该清单打勾，改「最后更新」。
-3. README 只改「当前做到哪」一句；用法清单已在 G7 写入 README。
+3. README 最小用法保持 G7；阶段 I 允许再加一小段「可选（默认关）」开关与存盘，以及「当前做到哪」。仍禁止第三份架构文。
 4. 不新增 `*_v2.py`、不把 pPXF 接进 `starlightpy`。
 
 **代码：**
@@ -347,6 +363,7 @@ H4：年轻模板真值带 \(A_{YV}\) 时，打开 `fit_ayv` 能收回；关掉�
 
 - **v0.1（已完成）：** A + B + D + E。合成谱能收回少模板 \(x\)、\(A_V\)、\(v,\sigma\)，并支持 mask + clip + 读文件。C 已跳过。
 - **1.x（G1–G7）：** 可认真调用：管道、防错、完整结果、局部加密、有元数据时的质量/年龄产品、README 清单。H 不是 1.x 门槛。
+- **1.0.0（I1–I5）：** 结果带波长与拟合误差并可存盘读回；合成谱端到端；CI；README 可选开关。
 
 ---
 
@@ -381,6 +398,7 @@ H4：年轻模板真值带 \(A_{YV}\) 时，打开 `fit_ayv` 能收回；关掉�
 
 - **G（1.x）**：能被认真调用。
 - **H**：研究可用，默认关。
+- **I**：1.0 工作流（结果自洽、存盘、CI、版本）。
 - **永不做**：§2 第三档。
 
 一个仓库。`easyppxf` 太薄，不够单独开库；不统一成 `backend=`。
