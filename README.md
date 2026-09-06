@@ -116,7 +116,7 @@ age_L = light_weighted_age(result.x_fraction, ages)
 
 ## 拟合真星系之前
 
-观测和模板都要先准备好。`fit_spectrum` **不**搜索宇宙学红移，**不**拟合发射线。\(x_j\) 始终是 NNLS。
+观测和模板都要先准备好。`fit_spectrum` **不**搜索宇宙学红移。发射线默认用 mask，不要靠 `clip_nsigma` 当发射线处理。\(x_j\) 始终是 NNLS。
 
 1. **静止系。** 已知 \(z\) 用 `to_rest_frame`，或按下面约定使用 `redshift=`。不要让库去搜 \(z\)。
 2. **同一套波长。** 静止系真空 Å；不同网格用 `resample_to`。`build_model` 不负责插值。
@@ -249,11 +249,14 @@ print(pp.velocity, pp.sigma, pp.cite)
 
 ## 不要用它做什么
 
+这些与 [docs/PLAN.md](docs/PLAN.md) §2 永不做一致。当前库也不拟合发射线（mask）；以后若做可选气体模板，须先改合同。
+
 - 对 \(x_j\) 做 Metropolis / 退火（固定 \(A_V,v,\sigma\) 后应是 NNLS）
-- 在库里搜索宇宙学红移（与 \(v_\star\) 共线）
-- 同一个 `fit()` 里拟合发射线
+- 在 `fit_spectrum` 里搜索宇宙学红移（与 \(v_\star\) 共线）
+- 把发射线 EW / 线宽和尘埃、运动学一起网格；用 clip 当发射线
 - 指望和 `starlight.exe` 的 `.out` 逐字节相同
 - 把 pPXF / FIREFLY / Bagpipes 接进同一个 `fit_spectrum(..., backend=...)`
+- 把 pPXF 的多项式或逐成分不同的 \(\sigma\) 搬进 `starlightpy`
 - 把本包装成一种新的科学方法（请引用原论文）
 
 ---
