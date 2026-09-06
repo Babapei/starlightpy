@@ -6,8 +6,8 @@
 
 | 项 | 值 |
 | --- | --- |
-| 阶段 | 合同再审查 R1 已完成 |
-| 小段 | **R1 已完成**：永不做再审查并改口径；可优化项在 PLAN §2 以后可做。不要自动开工 O1–O10 |
+| 阶段 | O4-PyPI 已完成（1.0.0 已上架） |
+| 小段 | README 主安装句为 `pip install starlightpy`。不要自动开工 O1–O3、O5–O10；Zenodo 不做 |
 | 不要做 | 对 \(x_j\) 退火、`fit()` 内搜宇宙学 \(z\)、`backend=`、用真星系当测试真理、发行包捆绑 SSP、把 `easyppxf` 做成对等产品、无证据改 `pad_losvd` 默认、把发射线当非线性网格、把 pPXF 多项式搬进 `starlightpy` |
 
 ## 小段清单
@@ -69,6 +69,10 @@
 ### 合同再审查 R
 
 - [x] **R1** 再审查永不做；以后可做 O1–O10 写入 PLAN（本段无代码）
+
+### O4 发行
+
+- [x] **O4-PyPI** 1.0.0 上 PyPI；README 改为 `pip install starlightpy`
 
 ## G1 验收（先写再做，2026-09-02）
 
@@ -489,3 +493,4 @@ README 增加最小正确用法（`fit_spectrum` + 预处理开关）和真谱�
 | 2026-09-03 | U1–U3 | 真实使用：README 文件入口；easyppxf 同波长边界；两条静止系路径合成收回 |
 | 2026-09-03 | D1 | 根 README 改为产品页；工作版迁到 docs/DEVELOP.md；NGC 3522 示例图 |
 | 2026-09-06 | R1 | 再审查永不做（维持身份禁令；发射线/IFU/easyppxf 改口径）；优化项写入 PLAN §2 以后可做；不实现代码 |
+| 2026-09-06 | O4-PyPI | starlightpy 1.0.0 上架 PyPI；README 主安装句改为 pip install |
