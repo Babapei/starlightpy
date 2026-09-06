@@ -23,7 +23,7 @@
 
 ## 最小正确用法
 
-观测与模板先准备好（静止系、同一波长、分辨率、发射线 mask）。`fit_spectrum` 不搜索宇宙学红移，也不拟合发射线。\(x_j\) 始终是 NNLS。
+观测与模板先准备好（静止系、同一波长、分辨率、发射线 mask）。`fit_spectrum` 不搜索宇宙学红移。发射线默认 mask，不把 EW/线宽当非线性未知数。\(x_j\) 始终是 NNLS。禁止项与以后可做只认 [PLAN.md](PLAN.md) §2。
 
 ```python
 from starlightpy import (
